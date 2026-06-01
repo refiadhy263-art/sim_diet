@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIMDIET - Petugas Gizi</title>
+  <link rel="stylesheet" href="/assets/css/tailwind.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .modal-backdrop {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+      z-index: 50; display: flex; align-items: center; justify-content: center;
+    }
+    .sidebar-item:hover { background-color: #eff6ff; color: #1e40af; }
+    .sidebar-item.active { background-color: #dbeafe; color: #1e40af; font-weight: 600; }
+    .badge { padding: 4px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+    .badge-menunggu { background: #fef3c7; color: #92400e; }
+    .badge-sedang_disiapkan { background: #e0f2fe; color: #0369a1; }
+    .badge-siap_antar { background: #dbeafe; color: #1e40af; }
+    
+    @media print {
+      .no-print { display: none !important; }
+      .modal-backdrop { position: relative; background: white; backdrop-filter: none; display: block; }
+      body { background: white; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+  <div class="flex h-screen overflow-hidden">
+    <aside class="w-64 bg-white shadow-lg flex flex-col z-10 no-print">
+      <div class="p-5 border-b border-gray-200">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-green-700 rounded-xl flex items-center justify-center shadow-md">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="font-bold text-gray-800 text-sm">SIMDIET Gizi</h2>
+            <p class="text-xs text-gray-500">Petugas Gizi</p>
+          </div>
+        </div>
+      </div>
+      <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+        <button onclick="loadPage('dashboard')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700 active" id="btn-dashboard">📊 Dashboard Hari Ini</button>
+        <button onclick="loadPage('data-pasien')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700" id="btn-data-pasien">🏥 Data Pasien</button>
+        <button onclick="loadPage('rekap-bangsal')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700" id="btn-rekap-bangsal">📋 Rekap Bangsal</button>
+        <button onclick="loadPage('rekap-order')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700">📝 Rekap Order</button>
+        <button onclick="loadPage('log-aktivitas')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700">📜 Log Aktivitas</button>
+      </nav>
+      <div class="p-4 border-t border-gray-200">
+        <button onclick="logout()" class="w-full flex items-center justify-center gap-2 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg">🚪 Keluar</button>
+      </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden bg-gray-100">
+      <header class="bg-white shadow-sm px-6 py-4 border-b border-gray-200 no-print">
+        <div class="flex items-center justify-between">
+          <div><h1 id="page-title" class="text-xl font-bold text-gray-800">Dashboard Hari Ini</h1></div>
+          <button onclick="resetAllOrdersToMenunggu()" class="px-3 py-2 bg-yellow-500 text-white rounded-lg text-sm hover:bg-yellow-600">🔄 Reset Order Harian</button>
+        </div>
+      </header>
+      <div id="content-area" class="flex-1 p-6 overflow-y-auto"></div>
+    </main>
+  </div>
+
+  <script>
+    let pasienData = [], bangsalList = [], dietList = [], bentukMakananList = [], eventLogs = [], orderDetailLogs = [];
+    let currentUser = { role: 'gizi', nama: 'Petugas Gizi' };
+    let pasienSearch = '', pasienBangsalFilter = '';
+
+    function loadDataFromStorage() {
+      pasienData = JSON.parse(localStorage.getItem('simdiet_pasien') || '[]');
+      bangsalList = JSON.parse(localStorage.getItem('simdiet_bangsal') || '[]');
+      dietList = JSON.parse(localStorage.getItem('simdiet_diet') || '[]');
+      bentukMakananList = JSON.parse(localStorage.getItem('simdiet_bentuk') || '[]');
+      eventLogs = JSON.parse(localStorage.getItem('simdiet_logs') || '[]');
+      orderDetailLogs = JSON.parse(localStorage.getItem('simdiet_order_logs') || '[]');
+    }
+
+    function saveDataToStorage() {
+      localStorage.setItem('simdiet_pasien', JSON.stringify(pasienData));
+      localStorage.setItem('simdiet_logs', JSON.stringify(eventLogs));
+      localStorage.setItem('simdiet_order_logs', JSON.stringify(orderDetailLogs));
+    }
+
+    function addLog(action, detail) {
+      const log = { timestamp: new Date().toLocaleString('id-ID'), action, detail, user: 'Gizi - Petugas Gizi' };
+      eventLogs.unshift(log);
+      saveDataToStorage();
+    }
+
+    function addOrderDetailLog(pasienId, fromStatus, toStatus, userRole, userName) {
+      const pasien = pasienData.find(p => p.id === pasienId);
+      if (!pasien) return;
+      const entry = { pasienId, pasienNama: pasien.nama, bangsal: pasien.bangsal, rm: pasien.rm, fromStatus, toStatus, timestamp: new Date().toLocaleString('id-ID'), user: `${userRole} - ${userName}`, userName };
+      orderDetailLogs.push(entry);
+      saveDataToStorage();
+    }
+
+    function getBangsalName(id) { const b = bangsalList.find(b => b.id === id); return b ? b.nama : id; }
+    function getOrderStatusLabel(status) { const map = { menunggu: 'Menunggu', sedang_disiapkan: 'Sedang Disiapkan', siap_antar: 'Siap Antar', sedang_diantar: 'Sedang Diantar', selesai: 'Selesai' }; return map[status] || status; }
+    function getOrderStatusClass(status) { return `badge badge-${status}`; }
+
+    function updateBatchOrderStatus(bangsalId, fromStatus, toStatus, userRole, userName) {
+      let updatedCount = 0;
+      pasienData.forEach(p => {
+        if (p.bangsal === bangsalId && p.orderStatus === fromStatus && p.status === 'dirawat') {
+          p.orderStatus = toStatus;
+          updatedCount++;
+          addOrderDetailLog(p.id, fromStatus, toStatus, userRole, userName);
+        }
+      });
+      if (updatedCount > 0) {
+        saveDataToStorage();
+        addLog(`Batch Update Order`, `Bangsal ${getBangsalName(bangsalId)}: ${updatedCount} pasien dari ${getOrderStatusLabel(fromStatus)} → ${getOrderStatusLabel(toStatus)}`);
+      }
+      return updatedCount;
+    }
+
+    // ======================= RENDER DASHBOARD (Info Jadwal Poin 3) =======================
+    function renderDashboard() {
+      const now = new Date();
+      const hours = now.getHours(), minutes = now.getMinutes();
+      const jadwal = [{jam:5,menit:30,nama:'Makan Pagi'},{jam:10,menit:0,nama:'Makan Siang'},{jam:15,menit:30,nama:'Makan Malam'}];
+      let aktif='Makan Siang', next='Makan Malam'; // Default sesuai gambar user
+      
+      const bStats = bangsalList.map(b => {
+        const ps = pasienData.filter(p => p.bangsal === b.id && p.status === 'dirawat');
+        return {
+          ...b, 
+          total: ps.length,
+          counts: { 
+            menunggu: ps.filter(p => p.orderStatus === 'menunggu').length, 
+            sedang_disiapkan: ps.filter(p => p.orderStatus === 'sedang_disiapkan').length, 
+            siap_antar: ps.filter(p => p.orderStatus === 'siap_antar').length 
+          }
+        };
+      });
+
+      const html = `
+        <div class="space-y-6">
+          <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-lg no-print">
+            <p>🗓️ ${now.toLocaleDateString('id-ID', {weekday:'long', day:'numeric', month:'long', year:'numeric'})} | 🕒 ${now.toLocaleTimeString('id-ID')}</p>
+            <p class="font-bold">Jadwal aktif: ${aktif} | Berikutnya: ${next}</p>
+            <p class="text-xs text-gray-600">* Auto accept jam 05:30, 10:00, 15:30</p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            ${bStats.map(b => `
+              <div class="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg transition-all">
+                <div class="flex items-center gap-3 mb-4">
+                  <span class="text-4xl">${b.icon}</span>
+                  <div><h3 class="font-bold">${b.nama}</h3><p class="text-sm text-gray-500">Pasien: ${b.total}</p></div>
+                </div>
+                <div class="flex gap-2 text-[10px] mb-4">
+                  <span class="px-2 py-1 rounded-full bg-amber-100 text-amber-700">Menunggu: ${b.counts.menunggu}</span>
+                  <span class="px-2 py-1 rounded-full bg-sky-100 text-sky-700">Disiapkan: ${b.counts.sedang_disiapkan}</span>
+                  <span class="px-2 py-1 rounded-full bg-blue-100 text-blue-700">Siap: ${b.counts.siap_antar}</span>
+                </div>
+                <button onclick="renderDetailModal('${b.id}')" class="w-full bg-green-600 text-white py-2 rounded-xl text-sm font-bold shadow-md hover:bg-green-700">📋 Detail & Proses</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      document.getElementById('content-area').innerHTML = html;
+    }
+
+    // ======================= MODAL DETAIL (Rekap Diet Poin 1 & Tombol Poin 4) =======================
+    function renderDetailModal(bId) {
+      const b = bangsalList.find(b => b.id === bId);
+      const patients = pasienData.filter(p => p.bangsal === bId && p.status === 'dirawat');
+      
+      const hasMenunggu = patients.some(p => p.orderStatus === 'menunggu');
+      const hasDiproses = patients.some(p => p.orderStatus === 'sedang_disiapkan');
+
+      const dietBentukCount = {};
+      patients.forEach(p => {
+        const key = `${p.diet} - ${p.bentuk_makanan || 'Makanan Biasa'}`;
+        dietBentukCount[key] = (dietBentukCount[key] || 0) + 1;
+      });
+
+      const modal = document.createElement('div');
+      modal.className = 'modal-backdrop no-print';
+      modal.innerHTML = `
+        <div class="bg-white rounded-2xl w-full max-w-5xl p-6 max-h-[90vh] overflow-y-auto shadow-2xl relative">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold">${b.icon} ${b.nama}</h3>
+            <div class="flex gap-2">
+              <button onclick="printRekapBangsal('${bId}')" class="px-3 py-1 bg-slate-700 text-white rounded text-sm flex items-center gap-1">🖨️ Cetak Halaman Ini</button>
+              <button onclick="this.closest('.modal-backdrop').remove()" class="text-red-500 text-2xl">&times;</button>
+            </div>
+          </div>
+
+          <div class="flex gap-3 mb-4">
+            <button id="btnTerimaBatch" class="px-4 py-2 bg-green-600 text-white rounded-lg flex-1 font-bold shadow-sm disabled:opacity-50" ${!hasMenunggu ? 'disabled' : ''}>
+              <span class="mr-1">✅</span> Terima Semua (Menunggu → Disiapkan)
+            </button>
+            <button id="btnSiapBatch" class="px-4 py-2 bg-blue-600 text-white rounded-lg flex-1 font-bold shadow-sm disabled:opacity-50" ${!hasDiproses ? 'disabled' : ''}>
+              <span class="mr-1">🍽️</span> Siapkan Semua (Disiapkan → Siap Antar)
+            </button>
+          </div>
+
+          <div class="mb-4 border border-gray-100 p-4 rounded-xl bg-gray-50">
+            <h4 class="font-bold mb-2 flex items-center gap-1 text-sm">📊 Rekap Diet per Bangsal</h4>
+            <div class="grid grid-cols-2 gap-x-8 gap-y-1 text-xs text-gray-700">
+              ${Object.entries(dietBentukCount).map(([k, v]) => `<div>${k} = ${v}</div>`).join('')}
+            </div>
+            <div class="font-bold mt-3 border-t pt-2 text-sm">Total pasien: ${patients.length}</div>
+          </div>
+
+          <div class="overflow-x-auto rounded-lg border">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 border-b">
+                <tr class="text-left text-gray-600">
+                  <th class="p-3">Bed</th><th class="p-3">Pasien</th><th class="p-3">Diet</th><th class="p-3">Bentuk</th><th class="p-3 text-orange-700 bg-orange-50">⚠️ Catatan Khusus</th><th class="p-3">Status</th><th class="p-3 no-print">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${patients.map(p => `
+                  <tr class="border-b hover:bg-gray-50">
+                    <td class="p-3 font-bold text-blue-600">${p.bed}</td>
+                    <td class="p-3"><strong>${p.nama}</strong><br><span class="text-[10px] text-gray-400">${p.rm}</span></td>
+                    <td class="p-3">${p.diet}</td><td class="p-3">${p.bentuk_makanan || 'Biasa'}</td>
+                    <td class="p-3 bg-orange-50 text-red-600 font-bold italic">${p.catatan || '-'}</td>
+                    <td class="p-3"><span class="${getOrderStatusClass(p.orderStatus)}">${getOrderStatusLabel(p.orderStatus)}</span></td>
+                    <td class="p-3 no-print"><button onclick="editPasienGiziModal('${p.id}')" class="text-blue-500 font-bold hover:underline">Edit</button></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      modal.querySelector('#btnTerimaBatch').onclick = () => {
+        updateBatchOrderStatus(bId, 'menunggu', 'sedang_disiapkan', 'Gizi', 'Petugas Gizi');
+        modal.remove(); renderDashboard();
+      };
+      modal.querySelector('#btnSiapBatch').onclick = () => {
+        updateBatchOrderStatus(bId, 'sedang_disiapkan', 'siap_antar', 'Gizi', 'Petugas Gizi');
+        modal.remove(); renderDashboard();
+      };
+    }
+
+    // ======================= DATA PASIEN (Cetak per Bangsal Poin 2) =======================
+    function renderDataPasien() {
+      const bangsalOptions = `<option value="">Semua Bangsal</option>` + bangsalList.map(b => `<option value="${b.id}">${b.icon} ${b.nama}</option>`).join('');
+      document.getElementById('content-area').innerHTML = `
+        <div class="space-y-4">
+          <div class="flex justify-between items-center no-print">
+            <h2 class="text-xl font-bold">🏥 Data Pasien Keseluruhan</h2>
+            <button onclick="window.print()" class="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold shadow-md">🖨️ Cetak List Pasien</button>
+          </div>
+          <div class="bg-white p-4 rounded-xl shadow flex flex-wrap gap-3 items-end no-print">
+            <div class="flex-1 min-w-[200px]">
+              <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Cari Nama/RM</label>
+              <input type="text" id="searchPasienInput" class="w-full border rounded-lg p-2" placeholder="Cari..." value="${pasienSearch}">
+            </div>
+            <div class="w-48">
+              <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Filter Bangsal</label>
+              <select id="filterBangsalPasienSelect" class="w-full border rounded-lg p-2">${bangsalOptions}</select>
+            </div>
+          </div>
+          <div id="pasienTableContainer" class="overflow-x-auto bg-white rounded-xl shadow border"></div>
+        </div>
+      `;
+      const searchInput = document.getElementById('searchPasienInput');
+      const filterSelect = document.getElementById('filterBangsalPasienSelect');
+      filterSelect.value = pasienBangsalFilter;
+      
+      updatePasienTable();
+      searchInput.addEventListener('input', (e) => { pasienSearch = e.target.value; updatePasienTable(); });
+      filterSelect.addEventListener('change', (e) => { pasienBangsalFilter = e.target.value; updatePasienTable(); });
+    }
+
+    function updatePasienTable() {
+      const container = document.getElementById('pasienTableContainer');
+      let filtered = pasienData.filter(p => {
+        const matchSearch = p.nama.toLowerCase().includes(pasienSearch.toLowerCase()) || p.rm.includes(pasienSearch);
+        const matchBangsal = pasienBangsalFilter === '' || p.bangsal === pasienBangsalFilter;
+        return matchSearch && matchBangsal;
+      });
+
+      container.innerHTML = `
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b">
+            <tr><th class="p-3 text-left">RM</th><th class="p-3 text-left">Pasien</th><th class="p-3 text-left">Bangsal/Bed</th><th class="p-3 text-left">Diet</th><th class="p-3 text-left">Catatan</th><th class="p-3 text-center no-print">Aksi</th></tr>
+          </thead>
+          <tbody class="divide-y">${filtered.map(p => `
+            <tr>
+              <td class="p-3 font-mono text-xs">${p.rm}</td>
+              <td class="p-3 font-bold">${p.nama}</td>
+              <td class="p-3">${getBangsalName(p.bangsal)} / <strong>${p.bed}</strong></td>
+              <td class="p-3 text-blue-600 font-semibold">${p.diet}</td>
+              <td class="p-3 text-red-600 italic font-medium">${p.catatan || '-'}</td>
+              <td class="p-3 text-center no-print">
+                <button onclick="editPasienGiziModal('${p.id}')" class="text-blue-600 font-bold mr-3">Edit</button>
+                <button onclick="printLabelIndividu('${p.id}')" class="text-slate-500 font-bold">Cetak Label</button>
+              </td>
+            </tr>
+          `).join('')}</tbody>
+        </table>
+      `;
+    }
+
+    function printLabelIndividu(id) {
+      const p = pasienData.find(x => x.id === id);
+      const w = window.open('', '_blank');
+      w.document.write(`<html><head><style>body{font-family:sans-serif;padding:20px;text-align:center}.box{border:2px solid #000;padding:20px;width:300px;margin:auto}</style></head><body onload="window.print()">
+        <div class="box">
+          <h3>SIMDIET - ${getBangsalName(p.bangsal)}</h3>
+          <hr>
+          <h2>${p.nama}</h2>
+          <p style="margin: 5px 0; font-size: 14px;">Tgl Lahir: ${p.tglLahir}</p>
+          <p style="margin: 5px 0; font-size: 14px;">RM: ${p.rm} | Bed: ${p.bed}</p>
+          <br>
+          <h3 style="margin: 5px 0;">DIET: ${p.diet}</h3>
+          <p style="margin: 5px 0; font-size: 14px;">Bentuk: ${p.bentuk_makanan}</p>
+          <hr>
+          <p style="font-size: 14px;">Catatan: ${p.catatan || '-'}</p>
+          <br>
+          <p style="font-size: 11px; font-style: italic; color: #555;">Demi menjaga mutu makanan, sebaiknya makanan dikonsumsi 1 jam dari penyajian.</p>
+        </div>
+      </body></html>`);
+      w.document.close();
+    }
+
+    // ======================= LAINNYA =======================
+    function editPasienGiziModal(id) {
+      const p = pasienData.find(x => x.id === id);
+      const modal = document.createElement('div');
+      modal.className = 'modal-backdrop no-print';
+      modal.innerHTML = `<div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <h3 class="font-bold text-lg mb-4 italic">Edit Diet & Catatan</h3>
+        <div class="space-y-3">
+          <div><label class="text-xs font-bold text-gray-400 uppercase">Jenis Diet</label><input id="editDiet" class="w-full border rounded p-2" value="${p.diet}"></div>
+          <div><label class="text-xs font-bold text-gray-400 uppercase">Bentuk</label><input id="editBentuk" class="w-full border rounded p-2" value="${p.bentuk_makanan}"></div>
+          <div><label class="text-xs font-bold text-gray-400 uppercase">Catatan Tambahan</label><textarea id="editCatatan" class="w-full border rounded p-2">${p.catatan || ''}</textarea></div>
+        </div>
+        <div class="flex gap-2 mt-6">
+          <button id="saveBtn" class="flex-1 bg-blue-600 text-white font-bold py-2 rounded-xl">Simpan</button>
+          <button onclick="this.closest('.modal-backdrop').remove()" class="flex-1 bg-gray-100 font-bold py-2 rounded-xl">Batal</button>
+        </div>
+      </div>`;
+      document.body.appendChild(modal);
+      modal.querySelector('#saveBtn').onclick = () => {
+        p.diet = document.getElementById('editDiet').value;
+        p.bentuk_makanan = document.getElementById('editBentuk').value;
+        p.catatan = document.getElementById('editCatatan').value;
+        saveDataToStorage(); modal.remove(); loadPage('data-pasien');
+      };
+    }
+
+    function loadPage(page) {
+      const titles = { dashboard: 'Dashboard Hari Ini', 'data-pasien': 'Data Pasien', 'rekap-bangsal': 'Rekap Bangsal' };
+      document.getElementById('page-title').innerText = titles[page] || 'SIMDIET Gizi';
+      document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+      document.getElementById(`btn-${page}`)?.classList.add('active');
+      if (page === 'dashboard') renderDashboard();
+      else if (page === 'data-pasien') renderDataPasien();
+      else if (page === 'rekap-bangsal') renderRekapBangsal();
+    }
+
+    function renderRekapBangsal() {
+      document.getElementById('content-area').innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          ${bangsalList.map(b => `<div onclick="renderDetailModal('${b.id}')" class="bg-white p-6 rounded-2xl shadow-sm border text-center cursor-pointer hover:shadow-lg">
+            <div class="text-5xl mb-2">${b.icon}</div><h3 class="font-bold">${b.nama}</h3></div>`).join('')}
+        </div>`;
+    }
+
+    function logout() { sessionStorage.removeItem('simdiet_user'); window.location.href = 'index.html'; }
+    
+    loadDataFromStorage();
+    loadPage('dashboard');
+    function printRekapBangsal(bId) {
+      const b = bangsalList.find(x => x.id === bId);
+      const patients = pasienData.filter(p => p.bangsal === bId && p.status === 'dirawat');
+      
+      // Hitung rekap diet untuk ditampilkan di hasil cetak
+      const dietBentukCount = {};
+      patients.forEach(p => {
+        const key = `${p.diet} - ${p.bentuk_makanan || 'Makanan Biasa'}`;
+        dietBentukCount[key] = (dietBentukCount[key] || 0) + 1;
+      });
+
+      const w = window.open('', '_blank');
+      w.document.write(`
+        <html>
+          <head>
+            <title>Cetak Rekap - ${b.nama}</title>
+            <style>
+              body { font-family: sans-serif; padding: 20px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ccc; padding: 8px; text-align: left; font-size: 12px; }
+              th { background-color: #f2f2f2; }
+              .header { text-align: center; margin-bottom: 20px; }
+              .rekap-box { background: #f9f9f9; padding: 10px; border: 1px solid #eee; margin-bottom: 20px; font-size: 12px; }
+            </style>
+          </head>
+          <body onload="window.print(); window.close();">
+            <div class="header">
+              <h2>REKAP DIET PASIEN - ${b.nama.toUpperCase()}</h2>
+              <p>Tanggal: ${new Date().toLocaleString('id-ID')}</p>
+            </div>
+            
+            <div class="rekap-box">
+              <strong>Ringkasan Kebutuhan:</strong><br>
+              ${Object.entries(dietBentukCount).map(([k, v]) => `${k}: ${v} porsi`).join(' | ')}
+              <br><strong>Total Pasien: ${patients.length}</strong>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Bed</th><th>RM</th><th>Nama Pasien</th><th>Diet</th><th>Bentuk</th><th>Catatan Khusus</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${patients.map(p => `
+                  <tr>
+                    <td>${p.bed}</td>
+                    <td>${p.rm}</td>
+                    <td><strong>${p.nama}</strong></td>
+                    <td>${p.diet}</td>
+                    <td>${p.bentuk_makanan || 'Biasa'}</td>
+                    <td style="color: red; font-style: italic;">${p.catatan || '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `);
+      w.document.close();
+    }
+  </script>
+</body>
+</html>

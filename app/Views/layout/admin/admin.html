@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIMDIET - Admin</title>
+  <link rel="stylesheet" href="/assets/css/tailwind.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .modal-backdrop {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+      z-index: 50; display: flex; align-items: center; justify-content: center;
+    }
+    .sidebar-item:hover { background-color: #eff6ff; color: #1e40af; }
+    
+    /* CSS KHUSUS AGAR SIDEBAR & TOMBOL HILANG SAAT DI PRINT */
+    @media print {
+      aside, .no-print, header, #resetDataBtn { display: none !important; }
+      main { width: 100% !important; padding: 0 !important; margin: 0 !important; }
+      body { background: white; }
+      .bg-white { border: none !important; box-shadow: none !important; }
+      table { width: 100% !important; border-collapse: collapse; }
+      th, td { border: 1px solid #e2e8f0 !important; padding: 8px !important; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+  <div class="flex h-screen">
+    <aside class="w-64 bg-white shadow-lg flex flex-col z-10 no-print">
+      <div class="p-5 border-b border-gray-200">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-md">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="font-bold text-gray-800 text-sm">SIMDIET Admin</h2>
+            <p class="text-xs text-gray-500">Administrator</p>
+          </div>
+        </div>
+      </div>
+      <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+        <button onclick="loadPage('dashboard')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700">📊 Dashboard</button>
+        <button onclick="loadPage('manajemen-perawat')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700">👩‍⚕️ Data Perawat</button>
+        <button onclick="loadPage('manajemen-gizi')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700">🍽️ Data Ahli Gizi</button>
+        <button onclick="loadPage('data-pasien')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700">🏥 Data Pasien</button>
+        <button onclick="loadPage('data-diet')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700">🍽️ Jenis Diet</button>
+        <button onclick="loadPage('bentuk-makanan')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700">🥣 Bentuk Diet</button>
+        <button onclick="loadPage('data-bangsal')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700">🛏️ Data Bangsal</button>
+        <button onclick="loadPage('manajemen-bed')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700" id="btn-manajemen-bed">🛌 Manajemen Bed</button>
+        <button onclick="loadPage('log-aktivitas')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700">📜 Log Aktivitas</button>
+      </nav>
+      <button id="resetDataBtn" class="w-full flex items-center justify-center gap-2 py-2 text-sm text-orange-600 hover:bg-orange-50 rounded-lg mt-2">🔄 Reset Data Awal</button>
+      <div class="p-4 border-t border-gray-200">
+        <button onclick="logout()" class="w-full flex items-center justify-center gap-2 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg">🚪 Keluar</button>
+      </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden bg-gray-100">
+      <header class="bg-white shadow-sm px-6 py-4 border-b border-gray-200 no-print">
+        <div class="flex items-center justify-between">
+          <div><h1 id="page-title" class="text-xl font-bold text-gray-800">Dashboard</h1><p id="page-subtitle" class="text-sm text-gray-500"></p></div>
+          <div class="px-3 py-2 bg-gray-100 rounded-lg"><span id="current-date" class="text-sm text-gray-600"></span></div>
+        </div>
+      </header>
+      <div id="content-area" class="flex-1 p-6 overflow-y-auto"></div>
+    </main>
+  </div>
+
+  <script>
+    // ======================= DATA & STORAGE =======================
+    let pasienData = [], bangsalList = [], dietList = [], bentukMakananList = [], akunPerawat = [], akunAhliGizi = [], eventLogs = [];
+    let perawatSearch = '', perawatBangsalFilter = '';
+    let giziSearch = '';
+    let pasienSearch = '', pasienBangsalFilter = '';
+
+    // Fungsi reset data
+    function resetAllData() {
+      if (confirm('PERINGATAN: Semua data akan dihapus dan dikembalikan ke data awal. Lanjutkan?')) {
+        const keys = ['simdiet_pasien', 'simdiet_bangsal', 'simdiet_diet', 'simdiet_bentuk', 'simdiet_perawat', 'simdiet_gizi', 'simdiet_logs', 'simdiet_order_logs'];
+        keys.forEach(key => localStorage.removeItem(key));
+        loadDataFromStorage();
+        initDefaultData();
+        addLog('Reset Data', 'Semua data dikembalikan ke default', 'Admin', 'Administrator');
+        loadPage(currentPage);
+        alert('Data telah direset ke kondisi awal.');
+      }
+    }
+    document.getElementById('resetDataBtn')?.addEventListener('click', resetAllData);
+  
+  function loadDataFromStorage() {
+      pasienData = JSON.parse(localStorage.getItem('simdiet_pasien') || '[]');
+      bangsalList = JSON.parse(localStorage.getItem('simdiet_bangsal') || '[]');
+      dietList = JSON.parse(localStorage.getItem('simdiet_diet') || '[]');
+      bentukMakananList = JSON.parse(localStorage.getItem('simdiet_bentuk') || '[]');
+      akunPerawat = JSON.parse(localStorage.getItem('simdiet_perawat') || '[]');
+      akunAhliGizi = JSON.parse(localStorage.getItem('simdiet_gizi') || '[]');
+      eventLogs = JSON.parse(localStorage.getItem('simdiet_logs') || '[]');
+    }
+    function saveDataToStorage() {
+      localStorage.setItem('simdiet_pasien', JSON.stringify(pasienData));
+      localStorage.setItem('simdiet_bangsal', JSON.stringify(bangsalList));
+      localStorage.setItem('simdiet_diet', JSON.stringify(dietList));
+      localStorage.setItem('simdiet_bentuk', JSON.stringify(bentukMakananList));
+      localStorage.setItem('simdiet_perawat', JSON.stringify(akunPerawat));
+      localStorage.setItem('simdiet_gizi', JSON.stringify(akunAhliGizi));
+      localStorage.setItem('simdiet_logs', JSON.stringify(eventLogs));
+    }
+    function initDefaultData() {
+      let changed = false;
+      if (bangsalList.length === 0) { bangsalList = [ { id: 'mawar', nama: 'Bangsal Mawar', icon: '🌹', kapasitas: 20 }, { id: 'melati', nama: 'Bangsal Melati', icon: '🌸', kapasitas: 25 }, { id: 'anggrek', nama: 'Bangsal Anggrek', icon: '🌺', kapasitas: 15 } ]; changed = true; }
+      if (dietList.length === 0) { dietList = [ { id: 'D001', nama: 'Diet Diabetes', deskripsi: 'Rendah karbohidrat sederhana' }, { id: 'D002', nama: 'Diet Rendah Garam', deskripsi: 'Natrium < 2g/hari' }, { id: 'D003', nama: 'Diet Lunak', deskripsi: 'Tekstur mudah dicerna' }, { id: 'D004', nama: 'Diet Rendah Protein', deskripsi: 'Protein < 40g/hari' }, { id: 'D005', nama: 'Diet Rendah Lemak', deskripsi: 'Lemak < 30% kalori' }, { id: 'D006', nama: 'Diet Tinggi Kalori', deskripsi: 'Kalori > 2500 kkal/hari' }, { id: 'D007', nama: 'Diet Jantung', deskripsi: 'Rendah garam, lemak, kolesterol' } ]; changed = true; }
+      if (bentukMakananList.length === 0) { bentukMakananList = [ { id: 'B01', nama: 'Makanan Biasa' }, { id: 'B02', nama: 'Bubur' }, { id: 'B03', nama: 'Nasi Tim' }, { id: 'B04', nama: 'Lembek' }, { id: 'B05', nama: 'Saring' } ]; changed = true; }
+      if (akunPerawat.length === 0) { akunPerawat = [ { id: 'P1', nama: 'Ns. Maya', username: 'perawat_mawar', password: '123', bangsal: 'mawar', nip: '198501012010012001', no_tlp: '081234567890', foto: '' }, { id: 'P2', nama: 'Ns. Rina', username: 'perawat_melati', password: '123', bangsal: 'melati', nip: '198502022010022002', no_tlp: '081234567891', foto: '' }, { id: 'P3', nama: 'Ns. Budi', username: 'perawat_anggrek', password: '123', bangsal: 'anggrek', nip: '198503032010032003', no_tlp: '081234567892', foto: '' } ]; changed = true; }
+      if (akunAhliGizi.length === 0) { akunAhliGizi = [ { id: 'G1', nama: 'Ahli Gizi Dina', username: 'gizi1', password: '123', nip: '198601012010011001', no_tlp: '081234567893', foto: '' } ]; changed = true; }
+      if (pasienData.length === 0) { pasienData = [ { id: 'P001', rm: 'RM-2024-001', nama: 'Ahmad Sudirman', tglLahir: '1965-03-15', diagnosa: 'Diabetes Melitus Tipe 2', bangsal: 'mawar', bed: 'A-01', diet: 'Diet Diabetes', bentuk_makanan: 'Makanan Biasa', catatan: 'Gula darah terkontrol', status: 'dirawat', orderStatus: 'menunggu' }, { id: 'P002', rm: 'RM-2024-002', nama: 'Siti Rahayu', tglLahir: '1978-07-22', diagnosa: 'Hipertensi Grade II', bangsal: 'melati', bed: 'B-03', diet: 'Diet Rendah Garam', bentuk_makanan: 'Makanan Biasa', catatan: 'Tekanan darah stabil', status: 'dirawat', orderStatus: 'menunggu' }, { id: 'P003', rm: 'RM-2024-003', nama: 'Budi Santoso', tglLahir: '1955-11-08', diagnosa: 'Post Operasi Usus', bangsal: 'anggrek', bed: 'C-02', diet: 'Diet Lunak', bentuk_makanan: 'Bubur', catatan: 'Recovery', status: 'dirawat', orderStatus: 'siap_antar' }, { id: 'P004', rm: 'RM-2024-004', nama: 'Dewi Lestari', tglLahir: '1982-04-30', diagnosa: 'Gagal Ginjal Kronik', bangsal: 'mawar', bed: 'A-05', diet: 'Diet Rendah Protein', bentuk_makanan: 'Makanan Biasa', catatan: 'Hemodialisis', status: 'dirawat', orderStatus: 'sedang_disiapkan' }, { id: 'P005', rm: 'RM-2024-005', nama: 'Rina Marlina', tglLahir: '1995-12-01', diagnosa: 'Asma', bangsal: 'melati', bed: 'B-07', diet: 'Diet Jantung', bentuk_makanan: 'Makanan Biasa', catatan: 'Stabil', status: 'dirawat', orderStatus: 'menunggu' }, { id: 'P006', rm: 'RM-2024-006', nama: 'Eko Prasetyo', tglLahir: '1970-01-25', diagnosa: 'Stroke', bangsal: 'anggrek', bed: 'C-04', diet: 'Diet Rendah Lemak', bentuk_makanan: 'Nasi Tim', catatan: 'Fisioterapi', status: 'dirawat', orderStatus: 'menunggu' }, { id: 'P007', rm: 'RM-2024-007', nama: 'Nur Hidayah', tglLahir: '1988-06-18', diagnosa: 'Asma Bronkial', bangsal: 'mawar', bed: 'A-08', diet: 'Diet Tinggi Kalori', bentuk_makanan: 'Makanan Biasa', catatan: 'Kondisi stabil', status: 'pulang', orderStatus: 'selesai' } ]; changed = true; }
+      if (changed) saveDataToStorage();
+    }
+    function addLog(action, detail) { const log = { timestamp: new Date().toLocaleString('id-ID'), action, detail, user: 'Admin - Administrator' }; eventLogs.unshift(log); if (eventLogs.length > 200) eventLogs.pop(); saveDataToStorage(); }
+    function getBangsalName(id) { const b = bangsalList.find(b => b.id === id); return b ? b.nama : id; }
+    function getBangsalWithIcon(id) { const b = bangsalList.find(b => b.id === id); return b ? `${b.icon} ${b.nama}` : id; }
+    function getOrderStatusLabel(status) { const map = { menunggu: 'Menunggu', sedang_disiapkan: 'Sedang Disiapkan', siap_antar: 'Siap Antar', sedang_diantar: 'Sedang Diantar', selesai: 'Selesai' }; return map[status] || status; }
+
+    // ======================= CRUD (ringkas) =======================
+    function tambahPerawat(data) { const newId = 'P' + (akunPerawat.length + 1); akunPerawat.push({ id: newId, ...data }); saveDataToStorage(); addLog('Tambah Perawat', `Perawat ${data.nama}`); updatePerawatTable(); }
+    function editPerawat(id, data) { const idx = akunPerawat.findIndex(a => a.id === id); if (idx !== -1) { akunPerawat[idx] = { ...akunPerawat[idx], ...data }; saveDataToStorage(); addLog('Edit Perawat', `Data perawat ${data.nama}`); updatePerawatTable(); } }
+    function hapusPerawat(id) { if (confirm('Yakin hapus?')) { akunPerawat = akunPerawat.filter(a => a.id !== id); saveDataToStorage(); addLog('Hapus Perawat', `ID ${id}`); updatePerawatTable(); } }
+    function tambahGizi(data) { const newId = 'G' + (akunAhliGizi.length + 1); akunAhliGizi.push({ id: newId, ...data }); saveDataToStorage(); addLog('Tambah Gizi', `Gizi ${data.nama}`); updateGiziTable(); }
+    function editGizi(id, data) { const idx = akunAhliGizi.findIndex(a => a.id === id); if (idx !== -1) { akunAhliGizi[idx] = { ...akunAhliGizi[idx], ...data }; saveDataToStorage(); addLog('Edit Gizi', `Data gizi ${data.nama}`); updateGiziTable(); } }
+    function hapusGizi(id) { if (confirm('Yakin hapus?')) { akunAhliGizi = akunAhliGizi.filter(a => a.id !== id); saveDataToStorage(); addLog('Hapus Gizi', `ID ${id}`); updateGiziTable(); } }
+    function tambahPasien(data) { const newId = 'P' + String(pasienData.length + 1).padStart(3, '0'); const newRm = data.rm || `RM-2024-${String(pasienData.length + 1).padStart(3, '0')}`; const newPasien = { id: newId, rm: newRm, tglLahir: data.tglLahir, diagnosa: data.diagnosa, catatan: data.catatan || '', status: 'dirawat', orderStatus: 'menunggu', ...data }; pasienData.push(newPasien); saveDataToStorage(); addLog('Tambah Pasien', `Pasien ${newPasien.nama}`); updatePasienTable(); }
+    function updatePasien(pasienId, updatedFields) { const pasien = pasienData.find(p => p.id === pasienId); if (pasien) { Object.assign(pasien, updatedFields); saveDataToStorage(); addLog('Edit Pasien', `Data ${pasien.nama}`); updatePasienTable(); } }
+    function hapusPasien(id) { if (confirm('Yakin hapus?')) { pasienData = pasienData.filter(p => p.id !== id); saveDataToStorage(); addLog('Hapus Pasien', `ID ${id}`); updatePasienTable(); } }
+    function tambahDiet(data) { const newId = 'D' + String(dietList.length + 1).padStart(3, '0'); dietList.push({ id: newId, nama: data.nama, deskripsi: data.deskripsi }); saveDataToStorage(); addLog('Tambah Diet', data.nama); renderDataDiet(); }
+    function editDiet(id, data) { const idx = dietList.findIndex(d => d.id === id); if (idx !== -1) { dietList[idx] = { ...dietList[idx], ...data }; saveDataToStorage(); addLog('Edit Diet', data.nama); renderDataDiet(); } }
+    function hapusDiet(id) { const diet = dietList.find(d => d.id === id); if (pasienData.some(p => p.diet === diet?.nama)) { alert('Diet digunakan pasien'); return; } if (confirm('Yakin hapus?')) { dietList = dietList.filter(d => d.id !== id); saveDataToStorage(); addLog('Hapus Diet', id); renderDataDiet(); } }
+    function tambahBentuk(data) { const newId = 'B' + String(bentukMakananList.length + 1).padStart(2, '0'); bentukMakananList.push({ id: newId, nama: data.nama }); saveDataToStorage(); addLog('Tambah Bentuk', data.nama); renderBentukMakanan(); }
+    function editBentuk(id, data) { const idx = bentukMakananList.findIndex(b => b.id === id); if (idx !== -1) { bentukMakananList[idx] = { ...bentukMakananList[idx], ...data }; saveDataToStorage(); addLog('Edit Bentuk', data.nama); renderBentukMakanan(); } }
+    function hapusBentuk(id) { const bentuk = bentukMakananList.find(b => b.id === id); if (pasienData.some(p => p.bentuk_makanan === bentuk?.nama)) { alert('Bentuk digunakan'); return; } if (confirm('Yakin hapus?')) { bentukMakananList = bentukMakananList.filter(b => b.id !== id); saveDataToStorage(); addLog('Hapus Bentuk', id); renderBentukMakanan(); } }
+    function tambahBangsal(data) { if (bangsalList.find(b => b.id === data.id)) { alert('ID sudah ada'); return false; } bangsalList.push({ id: data.id, nama: data.nama, icon: data.icon || '🏥', kapasitas: parseInt(data.kapasitas) }); saveDataToStorage(); addLog('Tambah Bangsal', data.nama); renderDataBangsal(); return true; }
+    function editBangsal(id, data) { const idx = bangsalList.findIndex(b => b.id === id); if (idx !== -1) { bangsalList[idx] = { ...bangsalList[idx], ...data }; saveDataToStorage(); addLog('Edit Bangsal', data.nama); renderDataBangsal(); return true; } return false; }
+    function hapusBangsal(id) { if (pasienData.some(p => p.bangsal === id)) { alert('Masih ada pasien'); return false; } if (confirm('Yakin hapus?')) { bangsalList = bangsalList.filter(b => b.id !== id); saveDataToStorage(); addLog('Hapus Bangsal', id); renderDataBangsal(); return true; } return false; }
+
+    // ======================= RENDER MENU STATIS (Dashboard, Diet, Bentuk, Bangsal, Log) =======================
+    function renderDashboard() {
+      const pasienDirawat = pasienData.filter(p => p.status === 'dirawat');
+      const totalPasien = pasienDirawat.length;
+      const totalBangsal = bangsalList.length;
+      const totalDiet = dietList.length;
+      const bangsalStats = bangsalList.map(b => ({ ...b, count: pasienDirawat.filter(p => p.bangsal === b.id).length, persen: (pasienDirawat.filter(p => p.bangsal === b.id).length / b.kapasitas) * 100 }));
+      const dietCount = {}; pasienDirawat.forEach(p => { dietCount[p.diet] = (dietCount[p.diet] || 0) + 1; });
+      const dietItems = Object.entries(dietCount).map(([nama, jumlah]) => ({ nama, jumlah }));
+      const statusOrder = ['menunggu', 'sedang_disiapkan', 'siap_antar', 'sedang_diantar', 'selesai'];
+      const orderStats = statusOrder.map(s => ({ status: s, label: getOrderStatusLabel(s), count: pasienDirawat.filter(p => p.orderStatus === s).length }));
+      const html = `<div class="space-y-6"><div class="grid grid-cols-1 md:grid-cols-4 gap-5">${[
+        { title: 'Total Pasien Dirawat', value: totalPasien, icon: '🏥' },
+        { title: 'Total Bangsal', value: totalBangsal, icon: '🛏️' },
+        { title: 'Jenis Diet', value: totalDiet, icon: '🍽️' },
+        { title: 'Order Hari Ini', value: totalPasien, icon: '🍱' }
+      ].map(s => `<div class="bg-white rounded-2xl p-5 shadow-md border-l-4 border-blue-500"><div class="flex items-center justify-between"><div><p class="text-sm text-slate-500">${s.title}</p><p class="text-3xl font-bold text-slate-800">${s.value}</p></div><div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-2xl">${s.icon}</div></div></div>`).join('')}</div><div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white rounded-2xl p-5 shadow-md"><h3 class="font-bold text-lg mb-4">📊 Pasien per Bangsal</h3><div class="space-y-4">${bangsalStats.map(b => `<div><div class="flex justify-between text-sm mb-1"><span>${b.icon} ${b.nama}</span><span>${b.count}/${b.kapasitas}</span></div><div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full" style="width: ${b.persen}%"></div></div></div>`).join('')}</div></div><div class="bg-white rounded-2xl p-5 shadow-md"><h3 class="font-bold text-lg mb-4">🥗 Distribusi Diet</h3><div class="grid grid-cols-2 gap-3">${dietItems.map(d => `<div class="bg-slate-50 rounded-xl p-3 flex items-center gap-3"><div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">${d.jumlah}</div><span class="text-sm font-medium">${d.nama}</span></div>`).join('')}</div></div></div><div class="bg-white rounded-2xl p-5 shadow-md"><h3 class="font-bold text-lg mb-4">🍱 Status Order Makanan Hari Ini</h3><div class="grid grid-cols-5 gap-3">${orderStats.map(s => `<div class="text-center p-3 rounded-xl ${s.count > 0 ? 'bg-opacity-20' : 'bg-slate-50'} ${s.status === 'menunggu' ? 'bg-amber-50' : s.status === 'sedang_disiapkan' ? 'bg-sky-50' : s.status === 'siap_antar' ? 'bg-blue-50' : s.status === 'sedang_diantar' ? 'bg-purple-50' : 'bg-emerald-50'}"><p class="text-2xl font-bold text-slate-800">${s.count}</p><p class="text-xs font-medium text-slate-500">${s.label}</p></div>`).join('')}</div></div></div>`;
+      document.getElementById('content-area').innerHTML = html;
+    }
+    function renderDataDiet() {
+      const html = `<div class="space-y-6"><div class="flex justify-between"><h2 class="text-xl font-bold">Jenis Diet</h2><button onclick="showModalTambahDiet()" class="px-4 py-2 bg-blue-600 text-white rounded-xl">+ Tambah Diet</button></div><div class="grid grid-cols-1 md:grid-cols-3 gap-4">${dietList.map(d => `<div class="bg-white rounded-2xl p-4 shadow"><div class="font-bold">${d.nama}</div><div class="text-sm text-slate-500">${d.deskripsi}</div><div class="text-xs text-slate-400 mt-1">ID: ${d.id}</div><div class="mt-2 flex gap-2"><button onclick="editDietModal('${d.id}')" class="text-blue-500 text-sm">Edit</button><button onclick="hapusDiet('${d.id}')" class="text-red-500 text-sm">Hapus</button></div></div>`).join('')}</div></div>`;
+      document.getElementById('content-area').innerHTML = html;
+    }
+    function renderBentukMakanan() {
+      const html = `<div class="space-y-6"><div class="flex justify-between"><h2 class="text-xl font-bold">Bentuk Makanan</h2><button onclick="showModalTambahBentuk()" class="px-4 py-2 bg-blue-600 text-white rounded-xl">+ Tambah Bentuk</button></div><div class="grid grid-cols-1 md:grid-cols-3 gap-4">${bentukMakananList.map(b => `<div class="bg-white rounded-2xl p-4 shadow"><div class="font-bold">${b.nama}</div><div class="text-xs text-slate-400 mt-1">ID: ${b.id}</div><div class="mt-2 flex gap-2"><button onclick="editBentukModal('${b.id}')" class="text-blue-500 text-sm">Edit</button><button onclick="hapusBentuk('${b.id}')" class="text-red-500 text-sm">Hapus</button></div></div>`).join('')}</div></div>`;
+      document.getElementById('content-area').innerHTML = html;
+    }
+    function renderDataBangsal() {
+      const html = `<div class="space-y-6"><div class="flex justify-between"><h2 class="text-xl font-bold">Data Bangsal</h2><button onclick="showModalTambahBangsal()" class="px-4 py-2 bg-blue-600 text-white rounded-xl">+ Tambah Bangsal</button></div><div class="grid grid-cols-1 md:grid-cols-3 gap-4">${bangsalList.map(b => `<div class="bg-white rounded-2xl p-4 shadow"><div class="flex items-center gap-2"><span class="text-3xl">${b.icon}</span><div><div class="font-bold">${b.nama}</div><div class="text-sm">Kapasitas: ${b.kapasitas}</div></div></div><div class="mt-2 flex gap-2"><button onclick="editBangsalModal('${b.id}')" class="text-blue-500 text-sm">Edit</button><button onclick="hapusBangsal('${b.id}')" class="text-red-500 text-sm">Hapus</button></div></div>`).join('')}</div></div>`;
+      document.getElementById('content-area').innerHTML = html;
+    }
+    function renderLogAktivitas() {
+      const html = `<div class="bg-white rounded-2xl p-5 shadow overflow-auto"><table class="w-full text-sm">${eventLogs.map(log => `<tr class="border-b"><td class="p-2 whitespace-nowrap">${log.timestamp}</td><td class="p-2">${log.user}</td><td class="p-2 font-medium">${log.action}</td><td class="p-2">${log.detail}</td></tr>`).join('') || '<tr><td colspan="4">Belum ada log</td></tr>'}</table></div>`;
+      document.getElementById('content-area').innerHTML = html;
+    }
+
+    // ======================= MENU DENGAN FILTER (Data Perawat, Gizi, Pasien) =======================
+    function renderManajemenPerawat() {
+      const bangsalOptions = `<option value="">Semua Bangsal</option>` + bangsalList.map(b => `<option value="${b.id}">${b.icon} ${b.nama}</option>`).join('');
+      const html = `
+        <div class="space-y-4">
+          <div class="flex justify-between items-center flex-wrap gap-3">
+            <h2 class="text-xl font-bold">👩‍⚕️ Data Perawat</h2>
+            <button onclick="showModalTambahPerawat()" class="px-4 py-2 bg-blue-600 text-white rounded-xl">+ Tambah Perawat</button>
+          </div>
+          <div class="bg-white p-4 rounded-xl shadow flex flex-wrap gap-3 items-end">
+            <div class="flex-1 min-w-[200px]">
+              <label class="block text-sm font-medium text-gray-600">Cari (Nama/Username)</label>
+              <input type="text" id="searchPerawatInput" placeholder="Ketik nama atau username..." class="w-full border rounded-lg p-2">
+            </div>
+            <div class="w-48">
+              <label class="block text-sm font-medium text-gray-600">Filter Bangsal</label>
+              <select id="filterBangsalPerawatSelect" class="w-full border rounded-lg p-2">${bangsalOptions}</select>
+            </div>
+            <div>
+              <button id="resetPerawatFilterBtn" class="px-4 py-2 bg-gray-300 rounded-lg">Reset</button>
+            </div>
+          </div>
+          <div id="perawatTableContainer" class="overflow-x-auto"></div>
+        </div>
+      `;
+      document.getElementById('content-area').innerHTML = html;
+      const searchInput = document.getElementById('searchPerawatInput');
+      const filterSelect = document.getElementById('filterBangsalPerawatSelect');
+      if (searchInput) searchInput.value = perawatSearch;
+      if (filterSelect) filterSelect.value = perawatBangsalFilter;
+      updatePerawatTable();
+      if (searchInput) searchInput.addEventListener('input', (e) => { perawatSearch = e.target.value; updatePerawatTable(); });
+      if (filterSelect) filterSelect.addEventListener('change', (e) => { perawatBangsalFilter = e.target.value; updatePerawatTable(); });
+      const resetBtn = document.getElementById('resetPerawatFilterBtn');
+      if (resetBtn) resetBtn.addEventListener('click', () => { perawatSearch = ''; perawatBangsalFilter = ''; if (searchInput) searchInput.value = ''; if (filterSelect) filterSelect.value = ''; updatePerawatTable(); });
+    }
+    function updatePerawatTable() {
+      const container = document.getElementById('perawatTableContainer');
+      if (!container) return;
+      let filtered = akunPerawat.filter(p => {
+        const matchSearch = perawatSearch === '' || p.nama.toLowerCase().includes(perawatSearch.toLowerCase()) || p.username.toLowerCase().includes(perawatSearch.toLowerCase());
+        const matchBangsal = perawatBangsalFilter === '' || p.bangsal === perawatBangsalFilter;
+        return matchSearch && matchBangsal;
+      });
+      const tableHtml = `<table class="w-full text-sm bg-white rounded-2xl shadow"><thead class="bg-slate-50"><tr><th class="p-3">Nama</th><th>Username</th><th>Bangsal</th><th>NIP</th><th>No. Telp</th><th>Aksi</th></tr></thead><tbody>${filtered.map(p => `<tr class="border-b"><td class="p-3">${p.nama}</td><td class="p-3">${p.username}</td><td class="p-3">${getBangsalName(p.bangsal)}</td><td class="p-3">${p.nip || '-'}</td><td class="p-3">${p.no_tlp || '-'}</td><td class="p-3"><button onclick="editPerawatModal('${p.id}')" class="text-blue-500 mr-2">Edit</button><button onclick="hapusPerawat('${p.id}')" class="text-red-500">Hapus</button></td></tr>`).join('')}${filtered.length === 0 ? '<tr><td colspan="6" class="p-3 text-center text-gray-500">Tidak ada data</td></tr>' : ''}</tbody></table>`;
+      container.innerHTML = tableHtml;
+    }
+
+    function renderManajemenGizi() {
+      const html = `
+        <div class="space-y-4">
+          <div class="flex justify-between items-center flex-wrap gap-3">
+            <h2 class="text-xl font-bold">🍽️ Data Ahli Gizi</h2>
+            <button onclick="showModalTambahGizi()" class="px-4 py-2 bg-blue-600 text-white rounded-xl">+ Tambah Gizi</button>
+          </div>
+          <div class="bg-white p-4 rounded-xl shadow flex flex-wrap gap-3 items-end">
+            <div class="flex-1 min-w-[200px]">
+              <label class="block text-sm font-medium text-gray-600">Cari (Nama/Username)</label>
+              <input type="text" id="searchGiziInput" placeholder="Ketik nama atau username..." class="w-full border rounded-lg p-2">
+            </div>
+            <div>
+              <button id="resetGiziFilterBtn" class="px-4 py-2 bg-gray-300 rounded-lg">Reset</button>
+            </div>
+          </div>
+          <div id="giziTableContainer" class="overflow-x-auto"></div>
+        </div>
+      `;
+      document.getElementById('content-area').innerHTML = html;
+      const searchInput = document.getElementById('searchGiziInput');
+      if (searchInput) searchInput.value = giziSearch;
+      updateGiziTable();
+      if (searchInput) searchInput.addEventListener('input', (e) => { giziSearch = e.target.value; updateGiziTable(); });
+      const resetBtn = document.getElementById('resetGiziFilterBtn');
+      if (resetBtn) resetBtn.addEventListener('click', () => { giziSearch = ''; if (searchInput) searchInput.value = ''; updateGiziTable(); });
+    }
+    function updateGiziTable() {
+      const container = document.getElementById('giziTableContainer');
+      if (!container) return;
+      let filtered = akunAhliGizi.filter(g => giziSearch === '' || g.nama.toLowerCase().includes(giziSearch.toLowerCase()) || g.username.toLowerCase().includes(giziSearch.toLowerCase()));
+      const tableHtml = `<table class="w-full text-sm bg-white rounded-2xl shadow"><thead class="bg-slate-50"><tr><th class="p-3">Nama</th><th>Username</th><th>NIP</th><th>No. Telp</th><th>Aksi</th></tr></thead><tbody>${filtered.map(g => `<tr class="border-b"><td class="p-3">${g.nama}</td><td class="p-3">${g.username}</td><td class="p-3">${g.nip || '-'}</td><td class="p-3">${g.no_tlp || '-'}</td><td class="p-3"><button onclick="editGiziModal('${g.id}')" class="text-blue-500 mr-2">Edit</button><button onclick="hapusGizi('${g.id}')" class="text-red-500">Hapus</button></td></tr>`).join('')}${filtered.length === 0 ? '<tr><td colspan="5" class="p-3 text-center text-gray-500">Tidak ada data</td></tr>' : ''}</tbody></table>`;
+      container.innerHTML = tableHtml;
+    }
+
+    // ======================= PERUBAHAN: DATA PASIEN (DISAMAKAN DENGAN HALAMAN GIZI & PRINT) =======================
+    function renderDataPasien() {
+      const bangsalOptions = `<option value="">Semua Bangsal</option>` + bangsalList.map(b => `<option value="${b.id}">${b.icon} ${b.nama}</option>`).join('');
+      
+      const html = `
+        <div class="space-y-4">
+          <div class="flex justify-between items-center no-print">
+            <h2 class="text-xl font-bold">🏥 Data Pasien Keseluruhan</h2>
+            <div class="flex gap-2">
+              <button onclick="showModalTambahPasien()" class="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-md">+ Tambah Pasien</button>
+              <button onclick="window.print()" class="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold text-sm shadow-md">🖨️ Cetak List Pasien</button>
+            </div>
+          </div>
+          
+          <div class="bg-white p-4 rounded-xl shadow flex flex-wrap gap-3 items-end no-print">
+            <div class="flex-1 min-w-[200px]">
+              <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Cari Nama/RM</label>
+              <input type="text" id="searchPasienInput" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Cari..." value="${pasienSearch}">
+            </div>
+            <div class="w-48">
+              <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Filter Bangsal</label>
+              <select id="filterBangsalPasienSelect" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none">${bangsalOptions}</select>
+            </div>
+            <div>
+              <button onclick="resetPasienFilters()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-medium transition-colors">Reset Filter</button>
+            </div>
+          </div>
+
+          <div id="pasienTableContainer" class="overflow-x-auto bg-white rounded-xl shadow border">
+            </div>
+        </div>
+      `;
+      
+      document.getElementById('content-area').innerHTML = html;
+
+      const searchInput = document.getElementById('searchPasienInput');
+      const filterSelect = document.getElementById('filterBangsalPasienSelect');
+      
+      if (filterSelect) filterSelect.value = pasienBangsalFilter;
+      
+      updatePasienTable();
+
+      if (searchInput) searchInput.addEventListener('input', (e) => { 
+        pasienSearch = e.target.value; 
+        updatePasienTable(); 
+      });
+      
+      if (filterSelect) filterSelect.addEventListener('change', (e) => { 
+        pasienBangsalFilter = e.target.value; 
+        updatePasienTable(); 
+      });
+    }
+
+    function updatePasienTable() {
+      const container = document.getElementById('pasienTableContainer');
+      if (!container) return;
+
+      let filtered = pasienData.filter(p => {
+        const matchSearch = pasienSearch === '' || p.nama.toLowerCase().includes(pasienSearch.toLowerCase()) || p.rm.includes(pasienSearch);
+        const matchBangsal = pasienBangsalFilter === '' || p.bangsal === pasienBangsalFilter;
+        return matchSearch && matchBangsal;
+      });
+
+      container.innerHTML = `
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b">
+            <tr>
+              <th class="p-3 text-left">RM</th>
+              <th class="p-3 text-left">Pasien</th>
+              <th class="p-3 text-left">Bangsal/Bed</th>
+              <th class="p-3 text-left">Diet</th>
+              <th class="p-3 text-left">Catatan</th>
+              <th class="p-3 text-center">Status</th>
+              <th class="p-3 text-center no-print">Aksi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            ${filtered.map(p => `
+              <tr class="hover:bg-gray-50 transition-colors">
+                <td class="p-3 font-mono text-xs">${p.rm}</td>
+                <td class="p-3 font-bold text-gray-800">${p.nama}</td>
+                <td class="p-3">${getBangsalName(p.bangsal)} / <strong>${p.bed}</strong></td>
+                <td class="p-3 text-blue-600 font-semibold">${p.diet} <br> <span class="text-[10px] text-gray-400 font-normal">${p.bentuk_makanan || 'Makanan Biasa'}</span></td>
+                <td class="p-3 text-red-600 italic font-medium">${p.catatan || '-'}</td>
+                <td class="p-3 text-center">${p.status}</td>
+                <td class="p-3 text-center no-print">
+                  <button onclick="editPasienModal('${p.id}')" class="text-blue-600 font-bold mr-3 hover:underline">Edit</button>
+                  <button onclick="hapusPasienAdmin('${p.id}')" class="text-red-500 font-bold hover:underline">Hapus</button>
+                </td>
+              </tr>
+            `).join('')}
+            ${filtered.length === 0 ? '<tr><td colspan="7" class="p-10 text-center text-gray-400 font-medium text-lg">Data pasien tidak ditemukan</td></tr>' : ''}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function resetPasienFilters() {
+      pasienSearch = '';
+      pasienBangsalFilter = '';
+      renderDataPasien();
+    }
+
+    // ======================= MODAL HANDLERS (TIDAK DIRUBAH) =======================
+    window.showModalTambahPerawat = () => {
+      const bangsalOptions = bangsalList.map(b => `<option value="${b.id}">${b.icon} ${b.nama}</option>`).join('');
+      const modal = document.createElement('div'); modal.className = 'modal-backdrop';
+      modal.innerHTML = `<div class="bg-white rounded-2xl w-full max-w-md p-6"><h3 class="text-xl font-bold mb-4">Tambah Perawat</h3><div class="space-y-3"><div><label>Nama Lengkap</label><input id="new_nama" class="w-full border rounded p-2"></div><div><label>Username</label><input id="new_username" class="w-full border rounded p-2"></div><div><label>Password</label><input type="password" id="new_password" class="w-full border rounded p-2"></div><div><label>Bangsal</label><select id="new_bangsal" class="w-full border rounded p-2">${bangsalOptions}</select></div><div><label>NIP</label><input id="new_nip" class="w-full border rounded p-2"></div><div><label>No. Telepon</label><input id="new_no_tlp" class="w-full border rounded p-2"></div><div><label>Foto (URL)</label><input id="new_foto" class="w-full border rounded p-2"></div></div><div class="flex gap-3 mt-5"><button onclick="submitTambahPerawat()" class="flex-1 bg-blue-600 text-white py-2 rounded">Simpan</button><button onclick="this.closest('.modal-backdrop').remove()" class="px-4 py-2 bg-slate-200 rounded">Batal</button></div></div>`;
+      document.body.appendChild(modal);
+      window.submitTambahPerawat = () => {
+        const nama = document.getElementById('new_nama').value.trim();
+        const username = document.getElementById('new_username').value.trim();
+        const password = document.getElementById('new_password').value.trim() || '123';
+        const bangsal = document.getElementById('new_bangsal').value;
+        const nip = document.getElementById('new_nip').value.trim();
+        const no_tlp = document.getElementById('new_no_tlp').value.trim();
+        const foto = document.getElementById('new_foto').value.trim();
+        if (!nama || !username || !bangsal) { alert('Lengkapi data'); return; }
+        tambahPerawat({ nama, username, password, bangsal, nip, no_tlp, foto });
+        modal.remove();
+      };
+    };
+    window.editPerawatModal = (id) => {
+      const p = akunPerawat.find(a => a.id === id);
+      if (!p) return;
+      const bangsalOptions = bangsalList.map(b => `<option value="${b.id}" ${p.bangsal === b.id ? 'selected' : ''}>${b.icon} ${b.nama}</option>`).join('');
+      const modal = document.createElement('div'); modal.className = 'modal-backdrop';
+      modal.innerHTML = `<div class="bg-white rounded-2xl w-full max-w-md p-6"><h3 class="text-xl font-bold mb-4">Edit Perawat</h3><div class="space-y-3"><div><label>Nama Lengkap</label><input id="edit_nama" value="${p.nama}" class="w-full border rounded p-2"></div><div><label>Username</label><input id="edit_username" value="${p.username}" class="w-full border rounded p-2"></div><div><label>Password (kosongkan jika tidak diubah)</label><input type="password" id="edit_password" class="w-full border rounded p-2"></div><div><label>Bangsal</label><select id="edit_bangsal" class="w-full border rounded p-2">${bangsalOptions}</select></div><div><label>NIP</label><input id="edit_nip" value="${p.nip || ''}" class="w-full border rounded p-2"></div><div><label>No. Telepon</label><input id="edit_no_tlp" value="${p.no_tlp || ''}" class="w-full border rounded p-2"></div><div><label>Foto (URL)</label><input id="edit_foto" value="${p.foto || ''}" class="w-full border rounded p-2"></div></div><div class="flex gap-3 mt-5"><button onclick="submitEditPerawat('${id}')" class="flex-1 bg-blue-600 text-white py-2 rounded">Simpan</button><button onclick="this.closest('.modal-backdrop').remove()" class="px-4 py-2 bg-slate-200 rounded">Batal</button></div></div>`;
+      document.body.appendChild(modal);
+      window.submitEditPerawat = (id) => {
+        const nama = document.getElementById('edit_nama').value.trim();
+        const username = document.getElementById('edit_username').value.trim();
+        const bangsal = document.getElementById('edit_bangsal').value;
+        const newPassword = document.getElementById('edit_password').value.trim();
+        const nip = document.getElementById('edit_nip').value.trim();
+        const no_tlp = document.getElementById('edit_no_tlp').value.trim();
+        const foto = document.getElementById('edit_foto').value.trim();
+        const updateData = { nama, username, bangsal, nip, no_tlp, foto };
+        if (newPassword) updateData.password = newPassword;
+        if (!nama || !username || !bangsal) { alert('Lengkapi data'); return; }
+        editPerawat(id, updateData);
+        modal.remove();
+      };
+    };
+    window.showModalTambahGizi = () => {
+      const modal = document.createElement('div'); modal.className = 'modal-backdrop';
+      modal.innerHTML = `<div class="bg-white rounded-2xl w-full max-w-md p-6"><h3 class="text-xl font-bold mb-4">Tambah Ahli Gizi</h3><div class="space-y-3"><div><label>Nama Lengkap</label><input id="new_nama" class="w-full border rounded p-2"></div><div><label>Username</label><input id="new_username" class="w-full border rounded p-2"></div><div><label>Password</label><input type="password" id="new_password" class="w-full border rounded p-2"></div><div><label>NIP</label><input id="new_nip" class="w-full border rounded p-2"></div><div><label>No. Telepon</label><input id="new_no_tlp" class="w-full border rounded p-2"></div><div><label>Foto (URL)</label><input id="new_foto" class="w-full border rounded p-2"></div></div><div class="flex gap-3 mt-5"><button onclick="submitTambahGizi()" class="flex-1 bg-blue-600 text-white py-2 rounded">Simpan</button><button onclick="this.closest('.modal-backdrop').remove()" class="px-4 py-2 bg-slate-200 rounded">Batal</button></div></div>`;
+      document.body.appendChild(modal);
+      window.submitTambahGizi = () => {
+        const nama = document.getElementById('new_nama').value.trim();
+        const username = document.getElementById('new_username').value.trim();
+        const password = document.getElementById('new_password').value.trim() || '123';
+        const nip = document.getElementById('new_nip').value.trim();
+        const no_tlp = document.getElementById('new_no_tlp').value.trim();
+        const foto = document.getElementById('new_foto').value.trim();
+        if (!nama || !username) { alert('Lengkapi data'); return; }
+        tambahGizi({ nama, username, password, nip, no_tlp, foto });
+        modal.remove();
+      };
+    };
+    window.editGiziModal = (id) => {
+      const g = akunAhliGizi.find(a => a.id === id);
+      if (!g) return;
+      const modal = document.createElement('div'); modal.className = 'modal-backdrop';
+      modal.innerHTML = `<div class="bg-white rounded-2xl w-full max-w-md p-6"><h3 class="text-xl font-bold mb-4">Edit Ahli Gizi</h3><div class="space-y-3"><div><label>Nama Lengkap</label><input id="edit_nama" value="${g.nama}" class="w-full border rounded p-2"></div><div><label>Username</label><input id="edit_username" value="${g.username}" class="w-full border rounded p-2"></div><div><label>Password (kosongkan jika tidak diubah)</label><input type="password" id="edit_password" class="w-full border rounded p-2"></div><div><label>NIP</label><input id="edit_nip" value="${g.nip || ''}" class="w-full border rounded p-2"></div><div><label>No. Telepon</label><input id="edit_no_tlp" value="${g.no_tlp || ''}" class="w-full border rounded p-2"></div><div><label>Foto (URL)</label><input id="edit_foto" value="${g.foto || ''}" class="w-full border rounded p-2"></div></div><div class="flex gap-3 mt-5"><button onclick="submitEditGizi('${id}')" class="flex-1 bg-blue-600 text-white py-2 rounded">Simpan</button><button onclick="this.closest('.modal-backdrop').remove()" class="px-4 py-2 bg-slate-200 rounded">Batal</button></div></div>`;
+      document.body.appendChild(modal);
+      window.submitEditGizi = (id) => {
+        const nama = document.getElementById('edit_nama').value.trim();
+        const username = document.getElementById('edit_username').value.trim();
+        const newPassword = document.getElementById('edit_password').value.trim();
+        const nip = document.getElementById('edit_nip').value.trim();
+        const no_tlp = document.getElementById('edit_no_tlp').value.trim();
+        const foto = document.getElementById('edit_foto').value.trim();
+        const updateData = { nama, username, nip, no_tlp, foto };
+        if (newPassword) updateData.password = newPassword;
+        if (!nama || !username) { alert('Lengkapi data'); return; }
+        editGizi(id, updateData);
+        modal.remove();
+      };
+    };
+    window.showModalTambahPasien = () => {
+      const bangsalOptions = bangsalList.map(b => `<option value="${b.id}">${b.icon} ${b.nama}</option>`).join('');
+      const dietOptions = dietList.map(d => `<option value="${d.nama}">${d.nama}</option>`).join('');
+      const bentukOptions = bentukMakananList.map(b => `<option value="${b.nama}">${b.nama}</option>`).join('');
+      const modal = document.createElement('div'); modal.className = 'modal-backdrop';
+      modal.innerHTML = `<div class="bg-white rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto"><h3 class="text-xl font-bold mb-4">Tambah Pasien Baru</h3><div class="grid grid-cols-2 gap-4"><div><label>Nama</label><input id="new_nama" class="w-full border rounded p-2"></div><div><label>RM</label><input id="new_rm" class="w-full border rounded p-2" placeholder="RM-2024-XXX"></div><div><label>Tgl Lahir</label><input type="date" id="new_tgl" class="w-full border rounded p-2"></div><div><label>Diagnosa</label><input id="new_diagnosa" class="w-full border rounded p-2"></div><div><label>Bangsal</label><select id="new_bangsal" class="w-full border rounded p-2">${bangsalOptions}</select></div><div><label>Bed</label><input id="new_bed" class="w-full border rounded p-2"></div><div><label>Diet</label><select id="new_diet" class="w-full border rounded p-2">${dietOptions}</select></div><div><label>Bentuk Makanan</label><select id="new_bentuk" class="w-full border rounded p-2">${bentukOptions}</select></div><div class="md:col-span-2"><label>Catatan</label><textarea id="new_catatan" class="w-full border rounded p-2"></textarea></div></div><div class="flex gap-3 mt-4"><button onclick="submitTambahPasien()" class="bg-blue-600 text-white px-4 py-2 rounded">Simpan</button><button onclick="this.closest('.modal-backdrop').remove()" class="bg-slate-300 px-4 py-2 rounded">Batal</button></div></div>`;
+      document.body.appendChild(modal);
+      window.submitTambahPasien = () => {
+        const nama = document.getElementById('new_nama').value; const rm = document.getElementById('new_rm').value; const tglLahir = document.getElementById('new_tgl').value; const diagnosa = document.getElementById('new_diagnosa').value; const bangsal = document.getElementById('new_bangsal').value; const bed = document.getElementById('new_bed').value; const diet = document.getElementById('new_diet').value; const bentuk_makanan = document.getElementById('new_bentuk').value; const catatan = document.getElementById('new_catatan').value;
+        if (!nama || !bangsal || !bed || !diet) { alert('Lengkapi data'); return; }
+        tambahPasien({ nama, rm, tglLahir, diagnosa, bangsal, bed, diet, bentuk_makanan, catatan });
+        modal.remove();
+      };
+    };
+    window.editPasienModal = (id) => {
+      const p = pasienData.find(p => p.id === id); if (!p) return;
+      const bangsalOptions = bangsalList.map(b => `<option value="${b.id}" ${p.bangsal===b.id?'selected':''}>${b.icon} ${b.nama}</option>`).join('');
+      const dietOptions = dietList.map(d => `<option value="${d.nama}" ${p.diet===d.nama?'selected':''}>${d.nama}</option>`).join('');
+      const bentukOptions = bentukMakananList.map(b => `<option value="${b.nama}" ${(p.bentuk_makanan||'Makanan Biasa')===b.nama?'selected':''}>${b.nama}</option>`).join('');
+      const modal = document.createElement('div'); modal.className = 'modal-backdrop';
+      modal.innerHTML = `<div class="bg-white rounded-2xl w-full max-w-2xl p-6"><h3 class="text-xl font-bold mb-4">Edit Pasien</h3><div class="grid grid-cols-2 gap-4"><div><label>Nama</label><input id="edit_nama" value="${p.nama}" class="w-full border rounded p-2"></div><div><label>RM</label><input id="edit_rm" value="${p.rm}" class="w-full border rounded p-2"></div><div><label>Tgl Lahir</label><input type="date" id="edit_tgl" value="${p.tglLahir}" class="w-full border rounded p-2"></div><div><label>Diagnosa</label><input id="edit_diagnosa" value="${p.diagnosa}" class="w-full border rounded p-2"></div><div><label>Bangsal</label><select id="edit_bangsal" class="w-full border rounded p-2">${bangsalOptions}</select></div><div><label>Bed</label><input id="edit_bed" value="${p.bed}" class="w-full border rounded p-2"></div><div><label>Diet</label><select id="edit_diet" class="w-full border rounded p-2">${dietOptions}</select></div><div><label>Bentuk Makanan</label><select id="edit_bentuk" class="w-full border rounded p-2">${bentukOptions}</select></div><div class="md:col-span-2"><label>Catatan</label><textarea id="edit_catatan" class="w-full border rounded p-2">${p.catatan}</textarea></div></div><div class="flex gap-3 mt-4"><button onclick="submitEditPasien('${id}')" class="bg-blue-600 text-white px-4 py-2 rounded">Update</button><button onclick="this.closest('.modal-backdrop').remove()" class="bg-slate-300 px-4 py-2 rounded">Batal</button></div></div>`;
+      document.body.appendChild(modal);
+      window.submitEditPasien = (id) => {
+        const updated = { nama: document.getElementById('edit_nama').value, rm: document.getElementById('edit_rm').value, tglLahir: document.getElementById('edit_tgl').value, diagnosa: document.getElementById('edit_diagnosa').value, bangsal: document.getElementById('edit_bangsal').value, bed: document.getElementById('edit_bed').value, diet: document.getElementById('edit_diet').value, bentuk_makanan: document.getElementById('edit_bentuk').value, catatan: document.getElementById('edit_catatan').value };
+        updatePasien(id, updated);
+        modal.remove();
+      };
+    };
+    window.showModalTambahDiet = () => {
+      const modal = document.createElement('div'); modal.className = 'modal-backdrop';
+      modal.innerHTML = `<div class="bg-white rounded-2xl w-full max-w-md p-6"><h3 class="text-xl font-bold mb-4">Tambah Jenis Diet</h3><div class="space-y-3"><div><label>Nama Diet</label><input id="new_nama" class="w-full border rounded p-2"></div><div><label>Deskripsi</label><textarea id="new_deskripsi" class="w-full border rounded p-2"></textarea></div></div><div class="flex gap-3 mt-5"><button onclick="submitTambahDiet()" class="flex-1 bg-blue-600 text-white py-2 rounded">Simpan</button><button onclick="this.closest('.modal-backdrop').remove()" class="px-4 py-2 bg-slate-200 rounded">Batal</button></div></div>`;
+      document.body.appendChild(modal);
+      window.submitTambahDiet = () => {
+        const nama = document.getElementById('new_nama').value.trim();
+        const deskripsi = document.getElementById('new_deskripsi').value.trim();
+        if (nama && deskripsi) tambahDiet({ nama, deskripsi });
+        modal.remove();
+      };
+    };
+    window.editDietModal = (id) => {
+      const d = dietList.find(d=>d.id===id); if(!d) return;
+      const modal = document.createElement('div'); modal.className = 'modal-backdrop';
+      modal.innerHTML = `<div class="bg-white rounded-2xl w-full max-w-md p-6"><h3 class="text-xl font-bold mb-4">Edit Jenis Diet</h3><div class="space-y-3"><div><label>Nama Diet</label><input id="edit_nama" value="${d.nama}" class="w-full border rounded p-2"></div><div><label>Deskripsi</label><textarea id="edit_deskripsi" class="w-full border rounded p-2">${d.deskripsi}</textarea></div></div><div class="flex gap-3 mt-5"><button onclick="submitEditDiet('${id}')" class="flex-1 bg-blue-600 text-white py-2 rounded">Simpan</button><button onclick="this.closest('.modal-backdrop').remove()" class="px-4 py-2 bg-slate-200 rounded">Batal</button></div></div>`;
+      document.body.appendChild(modal);
+      window.submitEditDiet = (id) => {
+        const nama = document.getElementById('edit_nama').value.trim();
+        const deskripsi = document.getElementById('edit_deskripsi').value.trim();
+        if (nama && deskripsi) editDiet(id, { nama, deskripsi });
+        modal.remove();
+      };
+    };
+    window.showModalTambahBentuk = () => {
+      const modal = document.createElement('div'); modal.className = 'modal-backdrop';
+      modal.innerHTML = `<div class="bg-white rounded-2xl w-full max-w-md p-6"><h3 class="text-xl font-bold mb-4">Tambah Bentuk Makanan</h3><div class="space-y-3"><div><label>Nama Bentuk</label><input id="new_nama" class="w-full border rounded p-2"></div></div><div class="flex gap-3 mt-5"><button onclick="submitTambahBentuk()" class="flex-1 bg-blue-600 text-white py-2 rounded">Simpan</button><button onclick="this.closest('.modal-backdrop').remove()" class="px-4 py-2 bg-slate-200 rounded">Batal</button></div></div>`;
+      document.body.appendChild(modal);
+      window.submitTambahBentuk = () => {
+        const nama = document.getElementById('new_nama').value.trim();
+        if (nama) tambahBentuk({ nama });
+        modal.remove();
+      };
+    };
+    window.editBentukModal = (id) => {
+      const b = bentukMakananList.find(b=>b.id===id); if(!b) return;
+      const modal = document.createElement('div'); modal.className = 'modal-backdrop';
+      modal.innerHTML = `<div class="bg-white rounded-2xl w-full max-w-md p-6"><h3 class="text-xl font-bold mb-4">Edit Bentuk Makanan</h3><div class="space-y-3"><div><label>Nama Bentuk</label><input id="edit_nama" value="${b.nama}" class="w-full border rounded p-2"></div></div><div class="flex gap-3 mt-5"><button onclick="submitEditBentuk('${id}')" class="flex-1 bg-blue-600 text-white py-2 rounded">Simpan</button><button onclick="this.closest('.modal-backdrop').remove()" class="px-4 py-2 bg-slate-200 rounded">Batal</button></div></div>`;
+      document.body.appendChild(modal);
+      window.submitEditBentuk = (id) => {
+        const nama = document.getElementById('edit_nama').value.trim();
+        if (nama) editBentuk(id, { nama });
+        modal.remove();
+      };
+    };
+    window.showModalTambahBangsal = () => {
+      const modal = document.createElement('div'); modal.className = 'modal-backdrop';
+      modal.innerHTML = `<div class="bg-white rounded-2xl w-full max-w-md p-6"><h3 class="text-xl font-bold mb-4">Tambah Bangsal</h3><div class="space-y-3"><div><label>ID Bangsal</label><input id="new_id" class="w-full border rounded p-2" placeholder="contoh: mawar"></div><div><label>Nama Bangsal</label><input id="new_nama" class="w-full border rounded p-2"></div><div><label>Kapasitas</label><input type="number" id="new_kapasitas" class="w-full border rounded p-2"></div><div><label>Icon (emoji)</label><input id="new_icon" class="w-full border rounded p-2" placeholder="🏥"></div></div><div class="flex gap-3 mt-5"><button onclick="submitTambahBangsal()" class="flex-1 bg-blue-600 text-white py-2 rounded">Simpan</button><button onclick="this.closest('.modal-backdrop').remove()" class="px-4 py-2 bg-slate-200 rounded">Batal</button></div></div>`;
+      document.body.appendChild(modal);
+      window.submitTambahBangsal = () => {
+        const id = document.getElementById('new_id').value.trim();
+        const nama = document.getElementById('new_nama').value.trim();
+        const kapasitas = parseInt(document.getElementById('new_kapasitas').value);
+        const icon = document.getElementById('new_icon').value.trim() || '🏥';
+        if (!id || !nama || isNaN(kapasitas)) { alert('Lengkapi data'); return; }
+        if (bangsalList.find(b => b.id === id)) { alert('ID sudah ada'); return; }
+        tambahBangsal({ id, nama, icon, kapasitas });
+        modal.remove();
+      };
+    };
+    window.editBangsalModal = (id) => {
+      const b = bangsalList.find(b=>b.id===id); if(!b) return;
+      const modal = document.createElement('div'); modal.className = 'modal-backdrop';
+      modal.innerHTML = `<div class="bg-white rounded-2xl w-full max-w-md p-6"><h3 class="text-xl font-bold mb-4">Edit Bangsal</h3><div class="space-y-3"><div><label>ID Bangsal</label><input id="edit_id" value="${b.id}" disabled class="w-full border rounded p-2 bg-slate-100"></div><div><label>Nama Bangsal</label><input id="edit_nama" value="${b.nama}" class="w-full border rounded p-2"></div><div><label>Kapasitas</label><input type="number" id="edit_kapasitas" value="${b.kapasitas}" class="w-full border rounded p-2"></div><div><label>Icon (emoji)</label><input id="edit_icon" value="${b.icon}" class="w-full border rounded p-2"></div></div><div class="flex gap-3 mt-5"><button onclick="submitEditBangsal('${id}')" class="flex-1 bg-blue-600 text-white py-2 rounded">Simpan</button><button onclick="this.closest('.modal-backdrop').remove()" class="px-4 py-2 bg-slate-200 rounded">Batal</button></div></div>`;
+      document.body.appendChild(modal);
+      window.submitEditBangsal = (id) => {
+        const nama = document.getElementById('edit_nama').value.trim();
+        const kapasitas = parseInt(document.getElementById('edit_kapasitas').value);
+        const icon = document.getElementById('edit_icon').value.trim() || '🏥';
+        if (!nama || isNaN(kapasitas)) { alert('Lengkapi data'); return; }
+        editBangsal(id, { nama, kapasitas, icon });
+        modal.remove();
+      };
+    };
+
+    // ======================= PAGE NAVIGATION =======================
+    function loadPage(page) {
+      currentPage = page;
+      document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+      document.getElementById(`btn-${page}`)?.classList.add('active');
+      
+      const titles = { dashboard: 'Dashboard', 'manajemen-perawat': 'Manajemen Perawat', 'manajemen-gizi': 'Manajemen Ahli Gizi', 'data-pasien': 'Data Pasien', 'data-diet': 'Jenis Diet', 'bentuk-makanan': 'Bentuk Diet', 'data-bangsal': 'Data Bangsal', 'log-aktivitas': 'Log Aktivitas', 'manajemen-bed': 'Manajemen Bed' };
+      document.getElementById('page-title').innerText = titles[page] || 'Dashboard';
+      document.getElementById('page-subtitle').innerText = '';
+      
+      if (page === 'dashboard') renderDashboard();
+      else if (page === 'manajemen-perawat') renderManajemenPerawat();
+      else if (page === 'manajemen-gizi') renderManajemenGizi();
+      else if (page === 'data-pasien') renderDataPasien();
+      else if (page === 'data-diet') renderDataDiet();
+      else if (page === 'bentuk-makanan') renderBentukMakanan();
+      else if (page === 'data-bangsal') renderDataBangsal();
+      else if (page === 'manajemen-bed') renderManajemenBed(); // <--- BARIS BARU
+      else if (page === 'log-aktivitas') renderLogAktivitas();
+      else renderDashboard();
+    }
+    function logout() { sessionStorage.removeItem('simdiet_user'); window.location.href = 'index.html'; }
+    // ======================= MANAJEMEN BED =======================
+    let bedBangsalFilter = '';
+    
+    function renderManajemenBed() {
+      // Pastikan data legacy memiliki array beds
+      let legacyChanged = false;
+      bangsalList.forEach(b => {
+        if (!b.beds) {
+          b.beds = [];
+          pasienData.filter(p => p.bangsal === b.id).forEach(p => { if (!b.beds.includes(p.bed)) b.beds.push(p.bed); });
+          legacyChanged = true;
+        }
+      });
+      if (legacyChanged) saveDataToStorage();
+
+      if (!bedBangsalFilter && bangsalList.length > 0) bedBangsalFilter = bangsalList[0].id;
+      
+      const bangsalOptions = bangsalList.map(b => `<option value="${b.id}" ${b.id === bedBangsalFilter ? 'selected' : ''}>${b.icon} ${b.nama}</option>`).join('');
+      const selectedBangsal = bangsalList.find(b => b.id === bedBangsalFilter);
+      let bedsHtml = '<p class="text-gray-400 text-sm col-span-4">Belum ada bed terdaftar di bangsal ini.</p>';
+      
+      if (selectedBangsal && selectedBangsal.beds && selectedBangsal.beds.length > 0) {
+        bedsHtml = selectedBangsal.beds.map(bed => `
+          <div class="bg-white p-3 rounded-xl border flex justify-between items-center shadow-sm">
+            <span class="font-bold text-blue-600">${bed}</span>
+            <button onclick="hapusBed('${selectedBangsal.id}', '${bed}')" class="text-red-500 text-xs font-bold hover:underline">Hapus</button>
+          </div>
+        `).join('');
+      }
+
+      document.getElementById('content-area').innerHTML = `
+        <div class="space-y-6">
+          <div class="flex justify-between items-center"><h2 class="text-xl font-bold">🛌 Manajemen Bed Bangsal</h2></div>
+          <div class="bg-white p-6 rounded-2xl shadow border flex flex-col md:flex-row gap-4 items-end">
+            <div class="flex-1">
+              <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Pilih Bangsal</label>
+              <select class="w-full border rounded-lg p-3 bg-gray-50 focus:ring-blue-500" onchange="bedBangsalFilter=this.value; renderManajemenBed()">${bangsalOptions}</select>
+            </div>
+            <div class="flex-1">
+              <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Tambah Bed Baru</label>
+              <div class="flex gap-2">
+                <input type="text" id="newBedInput" class="w-full border rounded-lg p-3 bg-gray-50 focus:ring-blue-500" placeholder="Contoh: A-01">
+                <button onclick="tambahBed()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold">Tambah</button>
+              </div>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">${bedsHtml}</div>
+        </div>
+      `;
+    }
+
+    function tambahBed() {
+      if (!bedBangsalFilter) return alert('Pilih bangsal dulu!');
+      const bedName = document.getElementById('newBedInput').value.trim();
+      if (!bedName) return alert('Nama bed tidak boleh kosong!');
+      const b = bangsalList.find(x => x.id === bedBangsalFilter);
+      if (!b.beds) b.beds = [];
+      if (b.beds.includes(bedName)) return alert('Bed sudah ada di bangsal ini!');
+      b.beds.push(bedName);
+      saveDataToStorage();
+      addLog('Tambah Bed', `Bed ${bedName} ditambahkan ke ${b.nama}`);
+      renderManajemenBed();
+    }
+
+    function hapusBed(bangsalId, bedName) {
+      const isOccupied = pasienData.some(p => p.bangsal === bangsalId && p.bed === bedName && p.status === 'dirawat');
+      if (isOccupied) return alert('Gagal! Bed sedang digunakan oleh pasien.');
+      if (confirm(`Yakin hapus bed ${bedName}?`)) {
+        const b = bangsalList.find(x => x.id === bangsalId);
+        b.beds = b.beds.filter(bed => bed !== bedName);
+        saveDataToStorage();
+        addLog('Hapus Bed', `Bed ${bedName} dihapus dari ${b.nama}`);
+        renderManajemenBed();
+      }
+    }
+
+    // ======================= INIT =======================
+    loadDataFromStorage();
+    initDefaultData();
+    document.getElementById('current-date').innerText = new Date().toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    loadPage('dashboard');
+    window.loadPage = loadPage;
+    window.logout = logout;
+    window.hapusPerawat = hapusPerawat; window.hapusGizi = hapusGizi; window.hapusPasienAdmin = hapusPasien;
+    window.hapusDiet = hapusDiet; window.hapusBentuk = hapusBentuk; window.hapusBangsal = hapusBangsal;
+  </script>
+</body>
+</html>

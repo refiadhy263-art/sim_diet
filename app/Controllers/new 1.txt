@@ -1,0 +1,41 @@
+       $routes->get('simas/admin/implementasi', 'Simas\Admin\Implementasi::index');
+       $routes->post('simas/admin/implementasi', 'Simas\Admin\Implementasi::index');
+       $routes->get('simas/admin/implementasi/new', 'Simas\Admin\Implementasi::new');
+       $routes->post('simas/admin/implementasi/create', 'Simas\Admin\Implementasi::create');
+       $routes->get('simas/admin/implementasi/(:segment)/(:segment)/edit', 'Simas\Admin\Implementasi::edit/$1/$2');
+       $routes->post('simas/admin/implementasi/update', 'Simas\Admin\Implementasi::update');
+       $routes->get('simas/admin/implementasi/(:segment)/delete', 'Simas\Admin\Implementasi::delete/$1');
+        $routes->match(['get', 'post'], 'simas/admin/implementasi/cetakPDF', 'Simas\Admin\Implementasi::cetakPDF');
+       $routes->get('simas/admin/implementasi/export', 'Simas\Admin\Implementasi::export');
+       $routes->get('simas/admin/implementasi/export_manual', 'Simas\Admin\Implementasi::export_manual'); //ekspor excel dengan view berbeda
+       $routes->get('simas/admin/implementasi/simpan_excel', 'Simas\Admin\Implementasi::simpanExcel'); //ekspor excel dengan view berbeda
+        //$routes->post('simas/admin/news/filter', 'NewsAdmin::filter');
+        //$routes->get('simas/admin/news/filter', 'NewsAdmin::filter');
+       $routes->get('simas/admin/mbkm', 'Simas\Admin\Mbkm::index');
+       $routes->post('simas/admin/mbkm', 'Simas\Admin\Mbkm::index');
+       $routes->get('simas/admin/mbkm/new', 'Simas\Admin\Mbkm::new');
+       $routes->post('simas/admin/mbkm/create', 'Simas\Admin\Mbkm::create');
+       $routes->get('simas/admin/mbkm/(:segment)/(:segment)/edit', 'Simas\Admin\Mbkm::edit/$1/$2');
+       $routes->post('simas/admin/mbkm/update', 'Simas\Admin\Mbkm::update');
+       $routes->get('simas/admin/mbkm/(:segment)/delete', 'Simas\Admin\Mbkm::delete/$1');
+        $routes->match(['get', 'post'], 'simas/admin/mbkm/cetakPDF', 'Simas\Admin\Mbkm::cetakPDF');
+       $routes->get('simas/admin/mbkm/export', 'Simas\Admin\Mbkm::export');
+       $routes->get('simas/admin/mbkm/export_manual', 'Simas\Admin\Mbkm::export_manual'); //ekspor excel dengan view berbeda
+       $routes->get('simas/admin/mbkm/simpan_excel', 'Simas\Admin\Mbkm::simpanExcel'); //ekspor excel dengan view berbeda
+
+       $routes->get('simas/admin/kerjasama', 'Simas\Admin\Kerjasama::index');
+       $routes->post('simas/admin/kerjasama', 'Simas\Admin\Kerjasama::index');
+       $routes->get('simas/admin/kerjasama/expired', 'Simas\Admin\Kerjasama::tampil_expired');
+       $routes->post('simas/admin/kerjasama/expired', 'Simas\Admin\Kerjasama::tampil_expired');
+       $routes->get('simas/admin/kerjasama/arsip', 'Simas\Admin\Kerjasama::tampil_arsip');
+       $routes->post('simas/admin/kerjasama/arsip', 'Simas\Admin\Kerjasama::tampil_arsip');
+
+       $routes->get('simas/admin/kerjasama/new', 'Simas\Admin\Kerjasama::new');
+       $routes->post('simas/admin/kerjasama/create', 'Simas\Admin\Kerjasama::create');
+       $routes->get('simas/admin/kerjasama/(:segment)/edit', 'Simas\Admin\Kerjasama::edit/$1');
+       $routes->post('simas/admin/kerjasama/update', 'Simas\Admin\Kerjasama::update');
+       $routes->get('simas/admin/kerjasama/(:segment)/edit_status', 'Simas\Admin\Kerjasama::edit_status/$1');
+       $routes->post('simas/admin/kerjasama/update_status', 'Simas\Admin\Kerjasama::update_status');
+       $routes->get('simas/admin/kerjasama/(:segment)/delete', 'Simas\Admin\Kerjasama::delete/$1');
+        $routes->match(['get', 'post'], 'simas/admin/kerjasama/cetakPDF', 'Simas\Admin\Kerjasama::cetakPDF');
+       $routes->get('simas/admin/kerjasama/export', 'Simas\Admin\Kerjasama::export');

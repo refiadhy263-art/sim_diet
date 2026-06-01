@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIMDIET - Perawat</title>
+  <link rel="stylesheet" href="/assets/css/tailwind.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .modal-backdrop {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+      z-index: 50; display: flex; align-items: center; justify-content: center;
+    }
+    .sidebar-item:hover { background-color: #eff6ff; color: #1e40af; }
+  </style>
+</head>
+<body class="bg-gray-100">
+  <div class="flex h-screen">
+    <aside class="w-64 bg-white shadow-lg flex flex-col z-10">
+      <div class="p-5 border-b border-gray-200">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-md">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="font-bold text-gray-800 text-sm">SIMDIET Perawat</h2>
+            <p id="userBangsalDisplay" class="text-xs text-gray-500">Bangsal</p>
+          </div>
+        </div>
+      </div>
+      <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+        <button onclick="loadPage('dashboard')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700">📊 Dashboard</button>
+        <button onclick="loadPage('daftar-pasien')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700">📋 Daftar Pasien</button>
+        <button onclick="loadPage('update-status')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700">🔄 Update Status Rawat</button>
+        <button onclick="loadPage('pasien-pulang')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700">🚪 Pasien Pulang/Meninggal</button>
+        <button onclick="loadPage('log-aktivitas')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-gray-700">📜 Log Aktivitas</button>
+      </nav>
+      <div class="p-4 border-t border-gray-200">
+        <button onclick="logout()" class="w-full flex items-center justify-center gap-2 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg">🚪 Keluar</button>
+      </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden bg-gray-100">
+      <header class="bg-white shadow-sm px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+          <div><h1 id="page-title" class="text-xl font-bold text-gray-800">Dashboard</h1><p id="page-subtitle" class="text-sm text-gray-500"></p></div>
+          <div class="px-3 py-2 bg-gray-100 rounded-lg"><span id="current-date" class="text-sm text-gray-600"></span></div>
+        </div>
+      </header>
+      <div id="content-area" class="flex-1 p-6 overflow-y-auto"></div>
+    </main>
+  </div>
+
+  <script>
+    // ======================= DATA & STORAGE =======================
+    let pasienData = [], bangsalList = [], dietList = [], bentukMakananList = [], eventLogs = [];
+    let currentUser = { bangsal: null, nama: '' };
+    let pasienSearch = '';
+
+    function loadDataFromStorage() {
+      pasienData = JSON.parse(localStorage.getItem('simdiet_pasien') || '[]');
+      bangsalList = JSON.parse(localStorage.getItem('simdiet_bangsal') || '[]');
+      dietList = JSON.parse(localStorage.getItem('simdiet_diet') || '[]');
+      bentukMakananList = JSON.parse(localStorage.getItem('simdiet_bentuk') || '[]');
+      eventLogs = JSON.parse(localStorage.getItem('simdiet_logs') || '[]');
+    }
+    
+    function saveDataToStorage() {
+      localStorage.setItem('simdiet_pasien', JSON.stringify(pasienData));
+      localStorage.setItem('simdiet_bangsal', JSON.stringify(bangsalList));
+      localStorage.setItem('simdiet_diet', JSON.stringify(dietList));
+      localStorage.setItem('simdiet_bentuk', JSON.stringify(bentukMakananList));
+      localStorage.setItem('simdiet_logs', JSON.stringify(eventLogs));
+    }
+    
+    function initDefaultData() {
+      let changed = false;
+      if (bangsalList.length === 0) {
+        bangsalList = [
+          { id: 'mawar', nama: 'Bangsal Mawar', icon: '🌹', kapasitas: 20, beds: ['A-01','A-02','A-03','A-04','A-05'] },
+          { id: 'melati', nama: 'Bangsal Melati', icon: '🌸', kapasitas: 25, beds: ['B-01','B-02','B-03','B-04','B-05'] },
+          { id: 'anggrek', nama: 'Bangsal Anggrek', icon: '🌺', kapasitas: 15, beds: ['C-01','C-02','C-03','C-04'] }
+        ];
+        changed = true;
+      } else {
+        // Fix jika data bangsal lama belum punya array beds
+        let legacyChanged = false;
+        bangsalList.forEach(b => {
+          if (!b.beds) {
+            b.beds = [];
+            pasienData.filter(p => p.bangsal === b.id).forEach(p => { if (!b.beds.includes(p.bed)) b.beds.push(p.bed); });
+            legacyChanged = true;
+          }
+        });
+        if(legacyChanged) changed = true;
+      }
+      
+      if (dietList.length === 0) {
+        dietList = [{ id: 'D001', nama: 'Diet Diabetes' }, { id: 'D002', nama: 'Diet Rendah Garam' }, { id: 'D003', nama: 'Diet Lunak' }];
+        changed = true;
+      }
+      if (bentukMakananList.length === 0) {
+        bentukMakananList = [{ id: 'B01', nama: 'Makanan Biasa' }, { id: 'B02', nama: 'Bubur' }, { id: 'B03', nama: 'Nasi Tim' }];
+        changed = true;
+      }
+      if (changed) saveDataToStorage();
+    }
+    
+    function addLog(action, detail) {
+      const log = { timestamp: new Date().toLocaleString('id-ID'), action, detail, user: `Perawat - ${currentUser.nama} (${getBangsalName(currentUser.bangsal)})` };
+      eventLogs.unshift(log);
+      if (eventLogs.length > 200) eventLogs.pop();
+      saveDataToStorage();
+    }
+    
+    function getBangsalName(id) { const b = bangsalList.find(b => b.id === id); return b ? b.nama : id; }
+    function getBangsalWithIcon(id) { const b = bangsalList.find(b => b.id === id); return b ? `${b.icon} ${b.nama}` : id; }
+    function getOrderStatusLabel(status) {
+      const map = { menunggu: 'Menunggu', sedang_disiapkan: 'Sedang Disiapkan', siap_antar: 'Siap Antar', sedang_diantar: 'Sedang Diantar', selesai: 'Selesai' };
+      return map[status] || status;
+    }
+    function getStatusBadgeColor(status) {
+      if(status === 'dirawat') return 'bg-blue-100 text-blue-700';
+      if(status === 'pulang') return 'bg-emerald-100 text-emerald-700';
+      if(status === 'meninggal') return 'bg-red-100 text-red-700';
+      return 'bg-gray-100 text-gray-700';
+    }
+
+    // ======================= UPDATE STATUS & PINDAH BANGSAL =======================
+    function updateStatusPasien(pasienId, newStatus, selectElement) {
+      const pasien = pasienData.find(p => p.id === pasienId);
+      if (pasien && pasien.bangsal === currentUser.bangsal) {
+        if (newStatus === 'pindah_bangsal') {
+          showModalPindahBangsal(pasienId, selectElement, pasien.status);
+          return; 
+        }
+        pasien.status = newStatus;
+        saveDataToStorage();
+        addLog('Update Status Rawat', `${pasien.nama} menjadi ${newStatus}`);
+        renderUpdateStatus(); 
+        if (currentPage === 'daftar-pasien') updateDaftarPasienTable();
+        if (currentPage === 'pasien-pulang') renderPasienPulang();
+        if (currentPage === 'dashboard') renderDashboard();
+      }
+    }
+
+    function showModalPindahBangsal(pasienId, selectElement, oldStatus) {
+      const p = pasienData.find(p => p.id === pasienId);
+      if (!p) return;
+
+      const targetBangsals = bangsalList.filter(b => {
+        if (b.id === currentUser.bangsal) return false; 
+        const allBeds = b.beds || [];
+        const occupiedBeds = pasienData.filter(x => x.bangsal === b.id && x.status === 'dirawat').map(x => x.bed);
+        const emptyBeds = allBeds.filter(bed => !occupiedBeds.includes(bed));
+        return emptyBeds.length > 0; 
+      });
+
+      if (targetBangsals.length === 0) {
+        alert('❌ Semua bangsal tujuan sedang penuh (tidak ada bed kosong). Pasien tidak dapat dipindahkan.');
+        if (selectElement) selectElement.value = oldStatus;
+        return; 
+      }
+
+      function getBedOptionsHtml(bangsalId) {
+        const b = bangsalList.find(x => x.id === bangsalId);
+        const allBeds = b.beds || [];
+        const occupiedBeds = pasienData.filter(x => x.bangsal === bangsalId && x.status === 'dirawat').map(x => x.bed);
+        const emptyBeds = allBeds.filter(bed => !occupiedBeds.includes(bed));
+        return emptyBeds.map(bed => `<option value="${bed}">${bed}</option>`).join('');
+      }
+
+      const initialBangsalTargetId = targetBangsals[0].id;
+      const initialBedOptions = getBedOptionsHtml(initialBangsalTargetId);
+
+      const modal = document.createElement('div');
+      modal.className = 'modal-backdrop';
+      modal.innerHTML = `
+        <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+          <h3 class="text-xl font-bold mb-2">Pindah Bangsal</h3>
+          <p class="mb-4 text-sm text-gray-500">Pilih bangsal dan bed kosong tujuan untuk <strong>${p.nama}</strong>.</p>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-bold text-gray-600 mb-1">Bangsal Tujuan (Tersedia)</label>
+              <select id="tujuan_bangsal" class="w-full border border-gray-300 rounded-lg p-3 bg-gray-50 focus:ring-blue-500 outline-none">
+                ${targetBangsals.map(b => `<option value="${b.id}">${b.icon} ${b.nama}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-bold text-gray-600 mb-1">Bed Kosong Tersedia</label>
+              <select id="tujuan_bed" class="w-full border border-gray-300 rounded-lg p-3 bg-gray-50 focus:ring-blue-500 outline-none">
+                ${initialBedOptions}
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-3 mt-6">
+            <button id="btnSimpanPindah" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all">Pindahkan Pasien</button>
+            <button id="btnBatalPindah" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-all">Batal</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const bangsalSelect = modal.querySelector('#tujuan_bangsal');
+      const bedSelect = modal.querySelector('#tujuan_bed');
+      const btnSimpan = modal.querySelector('#btnSimpanPindah');
+
+      bangsalSelect.addEventListener('change', function() {
+        bedSelect.innerHTML = getBedOptionsHtml(this.value);
+      });
+
+      modal.querySelector('#btnBatalPindah').onclick = () => {
+        if (selectElement) selectElement.value = oldStatus;
+        modal.remove();
+      };
+
+      btnSimpan.onclick = () => {
+        const newBangsalId = bangsalSelect.value;
+        const newBedId = bedSelect.value;
+        
+        if(!newBedId) return alert('Pilih bed tujuan terlebih dahulu!');
+
+        p.bangsal = newBangsalId;
+        p.bed = newBedId;
+        p.status = 'dirawat';
+        p.orderStatus = 'menunggu'; 
+
+        saveDataToStorage();
+        addLog('Pindah Bangsal', `Pasien ${p.nama} dipindahkan ke ${getBangsalName(newBangsalId)} - Bed ${newBedId}`);
+        modal.remove();
+        
+        alert(`✅ Pasien ${p.nama} berhasil dipindahkan dan tidak akan tampil lagi di daftar bangsal Anda.`);
+        renderUpdateStatus();
+        if (currentPage === 'daftar-pasien') updateDaftarPasienTable();
+        if (currentPage === 'dashboard') renderDashboard();
+      };
+    }
+
+    // ======================= CRUD PASIEN =======================
+    function tambahPasien(data) {
+      const newId = 'P' + String(pasienData.length + 1).padStart(3, '0');
+      const newRm = data.rm || `RM-2024-${String(pasienData.length + 1).padStart(3, '0')}`;
+      const newPasien = { id: newId, rm: newRm, tglLahir: data.tglLahir, diagnosa: data.diagnosa, catatan: data.catatan || '', status: 'dirawat', orderStatus: 'menunggu', nama: data.nama, bangsal: currentUser.bangsal, bed: data.bed, diet: data.diet, bentuk_makanan: data.bentuk_makanan };
+      pasienData.push(newPasien); saveDataToStorage();
+      addLog('Tambah Pasien', `Pasien ${newPasien.nama} (${newPasien.rm}) ditambahkan ke ${getBangsalName(currentUser.bangsal)}`);
+      if (currentPage === 'daftar-pasien') updateDaftarPasienTable(); else if (currentPage === 'update-status') renderUpdateStatus(); else if (currentPage === 'dashboard') renderDashboard();
+    }
+    function updatePasien(pasienId, updatedFields) {
+      const pasien = pasienData.find(p => p.id === pasienId);
+      if (pasien && pasien.bangsal === currentUser.bangsal) {
+        Object.assign(pasien, updatedFields); saveDataToStorage();
+        addLog('Edit Pasien', `Data ${pasien.nama} diperbarui: ${Object.keys(updatedFields).join(', ')}`);
+        if (currentPage === 'daftar-pasien') updateDaftarPasienTable(); else if (currentPage === 'update-status') renderUpdateStatus(); else if (currentPage === 'dashboard') renderDashboard();
+      }
+    }
+
+    // ======================= RENDER PAGES =======================
+    function renderDashboard() {
+      const patients = pasienData.filter(p => p.bangsal === currentUser.bangsal && p.status === 'dirawat');
+      const dietCount = {}, bentukCount = {};
+      patients.forEach(p => { dietCount[p.diet] = (dietCount[p.diet] || 0) + 1; bentukCount[p.bentuk_makanan || 'Makanan Biasa'] = (bentukCount[p.bentuk_makanan || 'Makanan Biasa'] || 0) + 1; });
+      const statusOrder = ['menunggu', 'sedang_disiapkan', 'siap_antar', 'sedang_diantar', 'selesai'];
+      const orderStats = statusOrder.map(s => ({ status: s, label: getOrderStatusLabel(s), count: patients.filter(p => p.orderStatus === s).length }));
+      const now = new Date(); const hours = now.getHours(); const minutes = now.getMinutes(); let jadwalAktif = '';
+      if (hours > 5 || (hours === 5 && minutes >= 30)) jadwalAktif = 'Sarapan (5:30)';
+      if (hours > 10 || (hours === 10 && minutes >= 0)) jadwalAktif = 'Snack (10:00)';
+      if (hours > 15 || (hours === 15 && minutes >= 30)) jadwalAktif = 'Makan Siang (15:30)';
+      document.getElementById('content-area').innerHTML = `
+        <div class="space-y-6">
+          <div class="bg-blue-50 rounded-xl p-4 text-blue-700">🕒 Waktu: ${now.toLocaleTimeString('id-ID')} | Jadwal aktif: ${jadwalAktif || 'Belum ada jadwal'}</div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-2xl p-5 shadow-md"><h3 class="font-bold text-lg mb-4">🍽️ Distribusi Diet</h3><div class="space-y-2">${Object.entries(dietCount).map(([nama,jml]) => `<div class="flex justify-between"><span>${nama}</span><span class="font-bold">${jml}</span></div>`).join('')}</div></div>
+            <div class="bg-white rounded-2xl p-5 shadow-md"><h3 class="font-bold text-lg mb-4">🥣 Distribusi Bentuk Makanan</h3><div class="space-y-2">${Object.entries(bentukCount).map(([nama,jml]) => `<div class="flex justify-between"><span>${nama}</span><span class="font-bold">${jml}</span></div>`).join('')}</div></div>
+          </div>
+          <div class="bg-white rounded-2xl p-5 shadow-md"><h3 class="font-bold text-lg mb-4">🍱 Status Order Makanan</h3><div class="grid grid-cols-5 gap-3">${orderStats.map(s => `<div class="text-center p-3 rounded-xl ${s.count > 0 ? 'bg-opacity-20' : 'bg-slate-50'} ${s.status === 'menunggu' ? 'bg-amber-50' : s.status === 'sedang_disiapkan' ? 'bg-sky-50' : s.status === 'siap_antar' ? 'bg-blue-50' : s.status === 'sedang_diantar' ? 'bg-purple-50' : 'bg-emerald-50'}"><p class="text-2xl font-bold text-slate-800">${s.count}</p><p class="text-xs font-medium text-slate-500">${s.label}</p></div>`).join('')}</div></div>
+        </div>
+      `;
+    }
+
+    function renderDaftarPasien() {
+      document.getElementById('content-area').innerHTML = `
+        <div class="space-y-4">
+          <div class="flex justify-between items-center flex-wrap gap-3"><h2 class="text-xl font-bold">📋 Daftar Pasien Dirawat (${getBangsalName(currentUser.bangsal)})</h2><button onclick="showModalTambahPasien()" class="px-4 py-2 bg-blue-600 text-white rounded-xl">+ Tambah Pasien</button></div>
+          <div class="bg-white p-4 rounded-xl shadow flex flex-wrap gap-3 items-end">
+            <div class="flex-1 min-w-[200px]"><label class="block text-sm font-medium text-gray-600">Cari (Nama/RM)</label><input type="text" id="searchPasienInput" placeholder="Ketik nama atau RM..." class="w-full border rounded-lg p-2" value="${pasienSearch}"></div>
+            <div><button id="resetPasienFilterBtn" class="px-4 py-2 bg-gray-300 rounded-lg">Reset</button></div>
+          </div>
+          <div id="pasienTableContainer" class="overflow-x-auto"></div>
+        </div>
+      `;
+      const searchInput = document.getElementById('searchPasienInput');
+      if (searchInput) searchInput.addEventListener('input', (e) => { pasienSearch = e.target.value; updateDaftarPasienTable(); });
+      const resetBtn = document.getElementById('resetPasienFilterBtn');
+      if (resetBtn) resetBtn.addEventListener('click', () => { pasienSearch = ''; if (searchInput) searchInput.value = ''; updateDaftarPasienTable(); });
+      updateDaftarPasienTable();
+    }
+    
+    function updateDaftarPasienTable() {
+      const container = document.getElementById('pasienTableContainer'); if (!container) return;
+      let filtered = pasienData.filter(p => p.bangsal === currentUser.bangsal && p.status === 'dirawat' && (pasienSearch === '' || p.nama.toLowerCase().includes(pasienSearch.toLowerCase()) || p.rm.toLowerCase().includes(pasienSearch.toLowerCase())));
+      container.innerHTML = `
+        <table class="w-full text-sm bg-white rounded-2xl shadow">
+          <thead class="bg-slate-50"><tr><th class="p-3">RM</th><th>Nama</th><th>Bed</th><th>Diagnosa</th><th>Diet</th><th>Bentuk</th><th>Status Order</th><th>Aksi</th></tr></thead>
+          <tbody>
+            ${filtered.map(p => `<tr class="border-b"><td class="p-3">${p.rm}</td><td class="p-3 font-bold">${p.nama}</td><td class="p-3 font-mono font-bold text-blue-600">${p.bed}</td><td class="p-3">${p.diagnosa}</td><td class="p-3">${p.diet}</td><td class="p-3">${p.bentuk_makanan || 'Makanan Biasa'}</td><td class="p-3"><span class="px-2 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">${getOrderStatusLabel(p.orderStatus)}</span></td><td class="p-3"><button onclick="editPasienModal('${p.id}')" class="text-blue-500 mr-2 font-bold hover:underline">Edit</button></tr>`).join('')}
+            ${filtered.length === 0 ? '<tr><td colspan="8" class="p-10 text-center text-gray-400 font-medium">Tidak ada pasien dirawat di bangsal ini</td></tr>' : ''}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderUpdateStatus() {
+      // Menampilkan HANYA pasien yang sedang dirawat untuk di-update statusnya
+      const patients = pasienData.filter(p => p.bangsal === currentUser.bangsal && p.status === 'dirawat');
+      document.getElementById('content-area').innerHTML = `
+        <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+          <div class="p-4 bg-gray-50 border-b"><p class="text-sm text-gray-500 font-medium">Ubah status menjadi 'Pulang' atau 'Meninggal' akan membebaskan bed agar dapat dipakai pasien lain.</p></div>
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b"><tr><th class="p-4 text-left">Pasien</th><th class="p-4 text-left">RM</th><th class="p-4 text-left">Bed</th><th class="p-4 text-center">Status Saat Ini</th><th class="p-4 text-left">Update Status</th></tr></thead>
+            <tbody class="divide-y">
+              ${patients.map(p => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                  <td class="p-4 font-bold">${p.nama}</td>
+                  <td class="p-4 font-mono text-gray-500 text-xs">${p.rm}</td>
+                  <td class="p-4 font-bold text-blue-600">${p.bed}</td>
+                  <td class="p-4 text-center"><span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase ${getStatusBadgeColor(p.status)}">${p.status}</span></td>
+                  <td class="p-4">
+                    <select onchange="updateStatusPasien('${p.id}', this.value, this)" class="border border-gray-300 rounded-lg p-2 bg-white shadow-sm focus:ring-blue-500 outline-none w-full max-w-xs">
+                      <option value="dirawat" ${p.status==='dirawat'?'selected':''}>Dirawat</option>
+                      <option value="pulang" ${p.status==='pulang'?'selected':''}>Pulang</option>
+                      <option value="meninggal" ${p.status==='meninggal'?'selected':''}>Meninggal</option>
+                      <option value="pindah_bangsal" class="font-bold text-blue-600">Pindah Bangsal...</option>
+                    </select>
+                  </td>
+                </tr>
+              `).join('')}
+              ${patients.length === 0 ? '<tr><td colspan="5" class="p-10 text-center text-gray-400 font-medium">Semua bed kosong. Tidak ada pasien dirawat.</td></tr>' : ''}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    // ======================= RENDER PASIEN PULANG / MENINGGAL =======================
+    function renderPasienPulang() {
+      // Menampilkan pasien yang statusnya bukan dirawat
+      const patients = pasienData.filter(p => p.bangsal === currentUser.bangsal && p.status !== 'dirawat');
+      document.getElementById('content-area').innerHTML = `
+        <div class="space-y-4">
+          <div class="flex justify-between items-center"><h2 class="text-xl font-bold">🚪 Riwayat Pasien Pulang/Meninggal</h2></div>
+          <div class="bg-white rounded-2xl shadow-md overflow-hidden">
+            <div class="p-4 bg-gray-50 border-b"><p class="text-sm text-gray-500 font-medium">Daftar pasien di bawah ini sudah tidak menempati bed dan tidak akan menerima suplai makanan.</p></div>
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 border-b"><tr><th class="p-4 text-left">RM</th><th class="p-4 text-left">Pasien</th><th class="p-4 text-left">Diagnosa Terakhir</th><th class="p-4 text-left">Bed Terakhir</th><th class="p-4 text-center">Status Akhir</th><th class="p-4 text-center">Aksi</th></tr></thead>
+              <tbody class="divide-y">
+                ${patients.map(p => `
+                  <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="p-4 font-mono text-xs text-gray-500">${p.rm}</td>
+                    <td class="p-4 font-bold">${p.nama}</td>
+                    <td class="p-4">${p.diagnosa}</td>
+                    <td class="p-4 text-gray-400 font-mono">${p.bed}</td>
+                    <td class="p-4 text-center"><span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase ${getStatusBadgeColor(p.status)}">${p.status}</span></td>
+                    <td class="p-4 text-center">
+                       <button onclick="updateStatusPasien('${p.id}', 'dirawat', null)" class="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-100 transition-colors">Kembalikan Dirawat</button>
+                    </td>
+                  </tr>
+                `).join('')}
+                ${patients.length === 0 ? '<tr><td colspan="6" class="p-10 text-center text-gray-400 font-medium">Belum ada riwayat pasien pulang atau meninggal di bangsal ini.</td></tr>' : ''}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderLogAktivitas() {
+      document.getElementById('content-area').innerHTML = `<div class="bg-white rounded-2xl p-5 shadow overflow-auto"><table class="w-full text-sm">${eventLogs.map(log => `<tr class="border-b"><td class="p-2 whitespace-nowrap">${log.timestamp}</td><td class="p-2">${log.user}</td><td class="p-2 font-medium">${log.action}</td><td class="p-2">${log.detail}</td></tr>`).join('') || '<tr><td colspan="4">Belum ada log</td></tr>'}</table></div>`;
+    }
+
+    // ======================= MODAL TAMBAH/EDIT PASIEN =======================
+    window.showModalTambahPasien = () => {
+      const b = bangsalList.find(x => x.id === currentUser.bangsal);
+      const occupied = pasienData.filter(x => x.bangsal === b.id && x.status === 'dirawat').map(x => x.bed);
+      const emptyBeds = (b.beds || []).filter(bed => !occupied.includes(bed));
+      let bedOptions = emptyBeds.length > 0 ? emptyBeds.map(bed => `<option value="${bed}">${bed}</option>`).join('') : '<option value="">-- BANGSAL PENUH --</option>';
+
+      const dietOptions = dietList.map(d => `<option value="${d.nama}">${d.nama}</option>`).join('');
+      const bentukOptions = bentukMakananList.map(b => `<option value="${b.nama}">${b.nama}</option>`).join('');
+      const modal = document.createElement('div'); modal.className = 'modal-backdrop';
+      modal.innerHTML = `
+        <div class="bg-white rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+          <h3 class="text-xl font-bold mb-4">Tambah Pasien Baru</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">Nama Lengkap</label><input id="new_nama" class="w-full border rounded-lg p-2 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"></div>
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">No. RM</label><input id="new_rm" class="w-full border rounded-lg p-2 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Otomatis"></div>
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">Tgl Lahir</label><input type="date" id="new_tgl" class="w-full border rounded-lg p-2 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"></div>
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">Diagnosa Medis</label><input id="new_diagnosa" class="w-full border rounded-lg p-2 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"></div>
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">Pilih Bed Kosong</label><select id="new_bed" class="w-full border rounded-lg p-2 bg-white outline-none focus:ring-2 focus:ring-blue-500 ${emptyBeds.length===0?'text-red-500 font-bold':''} cursor-pointer" ${emptyBeds.length===0?'disabled':''}>${bedOptions}</select></div>
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">Jenis Diet</label><select id="new_diet" class="w-full border rounded-lg p-2 bg-white outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">${dietOptions}</select></div>
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">Bentuk Makanan</label><select id="new_bentuk" class="w-full border rounded-lg p-2 bg-white outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">${bentukOptions}</select></div>
+            <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-500 mb-1">Catatan Tambahan (Alergi, dll)</label><textarea id="new_catatan" class="w-full border rounded-lg p-2 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"></textarea></div>
+          </div>
+          <div class="flex gap-3 mt-6"><button onclick="submitTambahPasien()" class="flex-1 bg-blue-600 hover:bg-blue-700 transition-colors text-white font-bold py-3 rounded-xl disabled:opacity-50" ${emptyBeds.length===0?'disabled':''}>Simpan Pasien</button><button onclick="this.closest('.modal-backdrop').remove()" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 font-bold text-gray-700 rounded-xl">Batal</button></div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      window.submitTambahPasien = () => {
+        const nama = document.getElementById('new_nama').value; const rm = document.getElementById('new_rm').value; const tglLahir = document.getElementById('new_tgl').value; const diagnosa = document.getElementById('new_diagnosa').value; const bed = document.getElementById('new_bed').value; const diet = document.getElementById('new_diet').value; const bentuk_makanan = document.getElementById('new_bentuk').value; const catatan = document.getElementById('new_catatan').value;
+        if (!nama || !bed || !diet) { alert('Lengkapi data (Nama, Bed, Diet)'); return; }
+        tambahPasien({ nama, rm, tglLahir, diagnosa, bed, diet, bentuk_makanan, catatan });
+        modal.remove();
+      };
+    };
+
+    window.editPasienModal = (id) => {
+      const p = pasienData.find(p => p.id === id);
+      if (!p || p.bangsal !== currentUser.bangsal) return;
+      
+      const b = bangsalList.find(x => x.id === currentUser.bangsal);
+      const occupied = pasienData.filter(x => x.bangsal === b.id && x.status === 'dirawat' && x.id !== id).map(x => x.bed);
+      const emptyBeds = (b.beds || []).filter(bed => !occupied.includes(bed));
+      if (!emptyBeds.includes(p.bed)) emptyBeds.unshift(p.bed);
+      
+      const bedOptions = emptyBeds.map(bed => `<option value="${bed}" ${bed===p.bed?'selected':''}>${bed}</option>`).join('');
+      const dietOptions = dietList.map(d => `<option value="${d.nama}" ${p.diet===d.nama?'selected':''}>${d.nama}</option>`).join('');
+      const bentukOptions = bentukMakananList.map(b => `<option value="${b.nama}" ${(p.bentuk_makanan||'Makanan Biasa')===b.nama?'selected':''}>${b.nama}</option>`).join('');
+      
+      const modal = document.createElement('div'); modal.className = 'modal-backdrop';
+      modal.innerHTML = `
+        <div class="bg-white rounded-2xl w-full max-w-2xl p-6">
+          <h3 class="text-xl font-bold mb-4">Edit Data Pasien</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">Nama Lengkap</label><input id="edit_nama" value="${p.nama}" class="w-full border rounded-lg p-2 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"></div>
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">No. RM</label><input id="edit_rm" value="${p.rm}" class="w-full border rounded-lg p-2 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"></div>
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">Tgl Lahir</label><input type="date" id="edit_tgl" value="${p.tglLahir}" class="w-full border rounded-lg p-2 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"></div>
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">Diagnosa Medis</label><input id="edit_diagnosa" value="${p.diagnosa}" class="w-full border rounded-lg p-2 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"></div>
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">Pindah Bed</label><select id="edit_bed" class="w-full border rounded-lg p-2 bg-white outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">${bedOptions}</select></div>
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">Jenis Diet</label><select id="edit_diet" class="w-full border rounded-lg p-2 bg-white outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">${dietOptions}</select></div>
+            <div><label class="block text-xs font-bold text-gray-500 mb-1">Bentuk Makanan</label><select id="edit_bentuk" class="w-full border rounded-lg p-2 bg-white outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">${bentukOptions}</select></div>
+            <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-500 mb-1">Catatan Tambahan</label><textarea id="edit_catatan" class="w-full border rounded-lg p-2 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500">${p.catatan}</textarea></div>
+          </div>
+          <div class="flex gap-3 mt-6"><button onclick="submitEditPasien('${id}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors">Update Data</button><button onclick="this.closest('.modal-backdrop').remove()" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 font-bold text-gray-700 rounded-xl transition-colors">Batal</button></div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      window.submitEditPasien = (id) => {
+        const updated = {
+          nama: document.getElementById('edit_nama').value, rm: document.getElementById('edit_rm').value,
+          tglLahir: document.getElementById('edit_tgl').value, diagnosa: document.getElementById('edit_diagnosa').value,
+          bed: document.getElementById('edit_bed').value, diet: document.getElementById('edit_diet').value,
+          bentuk_makanan: document.getElementById('edit_bentuk').value, catatan: document.getElementById('edit_catatan').value
+        };
+        updatePasien(id, updated);
+        modal.remove();
+      };
+    };
+
+    // ======================= PAGE NAVIGATION =======================
+    let currentPage = 'dashboard';
+    function loadPage(page) {
+      currentPage = page;
+      document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active', 'bg-blue-50', 'text-blue-700', 'font-bold'));
+      
+      const activeEl = Array.from(document.querySelectorAll('.sidebar-item')).find(el => el.getAttribute('onclick').includes(page));
+      if(activeEl) activeEl.classList.add('bg-blue-50', 'text-blue-700', 'font-bold');
+
+      const titles = { dashboard: 'Dashboard', 'daftar-pasien': 'Daftar Pasien', 'update-status': 'Update Status Rawat', 'pasien-pulang': 'Pasien Pulang/Meninggal', 'log-aktivitas': 'Log Aktivitas' };
+      document.getElementById('page-title').innerText = titles[page] || 'Dashboard';
+      document.getElementById('page-subtitle').innerText = '';
+      
+      if (page === 'dashboard') renderDashboard();
+      else if (page === 'daftar-pasien') renderDaftarPasien();
+      else if (page === 'update-status') renderUpdateStatus();
+      else if (page === 'pasien-pulang') renderPasienPulang(); // Panggil fungsi menu baru
+      else if (page === 'log-aktivitas') renderLogAktivitas();
+      else renderDashboard();
+    }
+    
+    function logout() {
+      sessionStorage.removeItem('simdiet_user');
+      window.location.href = 'index.html';
+    }
+
+    // ======================= INIT =======================
+    const userData = JSON.parse(sessionStorage.getItem('simdiet_user') || '{}');
+    if (!userData.role || userData.role !== 'perawat' || !userData.bangsal) {
+      window.location.href = 'index.html';
+    }
+    currentUser = { bangsal: userData.bangsal, nama: userData.nama || 'Perawat' };
+    document.getElementById('userBangsalDisplay').innerText = getBangsalName(currentUser.bangsal);
+    
+    loadDataFromStorage();
+    initDefaultData();
+    document.getElementById('current-date').innerText = new Date().toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    loadPage('dashboard');
+
+    window.loadPage = loadPage;
+    window.logout = logout;
+    window.updateStatusPasien = updateStatusPasien;
+  </script>
+</body>
+</html>

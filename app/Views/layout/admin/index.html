@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIMDIET - Login</title>
+  <link rel="stylesheet" href="/assets/css/tailwind.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+  </style>
+</head>
+<body class="h-screen flex items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+    <div class="text-center mb-6">
+      <h1 class="text-3xl font-bold text-gray-800">SIMDIET RS</h1>
+      <p class="text-gray-500">Sistem Informasi Manajemen Diet Pasien</p>
+    </div>
+    <form id="loginForm" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Role</label>
+        <select id="role" class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+          <option value="">-- Pilih Role --</option>
+          <option value="admin">Admin</option>
+          <option value="perawat">Perawat Bangsal</option>
+          <option value="gizi">Petugas Gizi</option>
+          <option value="pramusaji">Pramusaji Bangsal</option>
+        </select>
+      </div>
+      <div id="bangsalGroup" class="hidden">
+        <label class="block text-sm font-medium text-gray-700">Pilih Bangsal</label>
+        <select id="bangsal" class="mt-1 w-full px-4 py-2 border rounded-lg">
+          <option value="mawar">Bangsal Mawar</option>
+          <option value="melati">Bangsal Melati</option>
+          <option value="anggrek">Bangsal Anggrek</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Username</label>
+        <input type="text" id="username" class="mt-1 w-full px-4 py-2 border rounded-lg" placeholder="(kosongkan dulu)">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Password</label>
+        <input type="password" id="password" class="mt-1 w-full px-4 py-2 border rounded-lg" placeholder="(kosongkan dulu)">
+      </div>
+      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg transition">Masuk</button>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('role').addEventListener('change', function() {
+      const role = this.value;
+      const bangsalGroup = document.getElementById('bangsalGroup');
+      bangsalGroup.classList.toggle('hidden', !(role === 'perawat' || role === 'pramusaji'));
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const role = document.getElementById('role').value;
+      if (!role) {
+        alert('Pilih role terlebih dahulu');
+        return;
+      }
+      let bangsal = null;
+      if (role === 'perawat' || role === 'pramusaji') {
+        bangsal = document.getElementById('bangsal').value;
+        if (!bangsal) {
+          alert('Pilih bangsal');
+          return;
+        }
+      }
+      // Simpan data login ke sessionStorage
+      sessionStorage.setItem('simdiet_user', JSON.stringify({ role, bangsal }));
+      // Redirect ke halaman sesuai role
+      let targetPage = '';
+      if (role === 'admin') targetPage = 'admin.html';
+      else if (role === 'perawat') targetPage = 'perawat.html';
+      else if (role === 'gizi') targetPage = 'gizi.html';
+      else if (role === 'pramusaji') targetPage = 'pramusaji.html';
+      window.location.href = targetPage;
+    });
+  </script>
+</body>
+</html>
