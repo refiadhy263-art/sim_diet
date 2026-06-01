@@ -72,10 +72,11 @@ protected $logs;
     public function getData()
     {
         // Tangkap request dari AJAX/URL
-        $bangsal = $this->request->getGet('id_bangsal'); // Sesuai dengan parameter di request Anda
+        $search = $this->request->getGet('search');
+        $bangsal = $this->request->getGet('id_bangsal');
 
         // Panggil method dari Model yang sudah dibuat
-        $data = $this->pasien->getAll(null, $bangsal);
+        $data = $this->pasien->getAll($search, $bangsal);
 
         // Kembalikan sebagai format JSON
         return $this->response->setJSON($data);

@@ -36,6 +36,13 @@ class Pramusaji_model extends Model
         $builder->where('pramusaji.id_bangsal', $id_bangsal);
     }
 
+    if (!empty($search)) {
+        $builder->groupStart()
+                ->like('users.username', $search)
+                ->orLike('pramusaji.nama_pramusaji', $search)
+                ->groupEnd();
+    }
+
     return $builder->findAll();
 }
 

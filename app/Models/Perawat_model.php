@@ -36,6 +36,13 @@ class Perawat_model extends Model
         $builder->where('perawat.id_bangsal', $id_bangsal);
     }
 
+    if (!empty($search)) {
+        $builder->groupStart()
+                ->like('users.username', $search)
+                ->orLike('perawat.nama_perawat', $search)
+                ->groupEnd();
+    }
+
     return $builder->findAll();
 }
 
