@@ -372,6 +372,46 @@ protected $logs;
         return view('admin/pasien_rekap_bangsal_view', $data);
     }
 
+    public function rekap_order()
+    {
+        $id_bangsal = session()->get('id_bangsal');
+        $bangsal = $this->bangsal->find($id_bangsal);
+        if (!$bangsal) {
+            return redirect()->back()->with('error', 'Bangsal tidak ditemukan.');
+        }
+
+        $patients = $this->pasien->getPasienDirawat($id_bangsal);
+
+        $hasMenunggu = false;
+        $hasDiproses = false;
+        $dietRekap = [];
+
+        foreach ($patients as $p) {
+            if (isset($p['status_order'])) {
+                if ($p['status_order'] === '0') $hasMenunggu = true;
+                if ($p['status_order'] === '1') $hasDiproses = true;
+            }
+
+            $diet   = !empty($p['nama_jenis_diet']) ? $p['nama_jenis_diet'] : 'Biasa';
+            $bentuk = !empty($p['nama_bentuk_diet']) ? $p['nama_bentuk_diet'] : 'Biasa';
+            $key    = $diet . ' - ' . $bentuk;
+            
+            if (!isset($dietRekap[$key])) $dietRekap[$key] = 0;
+            $dietRekap[$key]++;
+        }
+
+        $data = [
+            'title' => 'Rekap Order Bangsal',
+            'bangsal' => $bangsal,
+            'patients' => $patients,
+            'hasMenunggu' => $hasMenunggu,
+            'hasDiproses' => $hasDiproses,
+            'dietRekap' => $dietRekap,
+        ];
+
+        return view('admin/pasien_rekap_order_view', $data);
+    }
+
     public function detail_bangsal($id_bangsal)
     {
         

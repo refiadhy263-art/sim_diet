@@ -83,7 +83,7 @@
           <i class="fi fi-rr-apps text-lg flex items-center"></i> Dashboard
         </a>
          <a href="<?= base_url('pasien/rekap_order') ?>" class="sidebar-item w-full flex items-center gap-3 px-4 py-2 rounded-xl text-left text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition <?= active_page('pasien/rekap_order') ?>">
-          <i class="fi fi-rr-file-invoice text-lg flex items-center"></i> Rekap Order
+          <i class="fi fi-rr-file-invoice text-lg flex items-center"></i> Rekap Bangsal
         </a>
 
          <?php  } ?>

@@ -94,6 +94,10 @@ class Bangsal_model extends Model
         return $this->where('id_bangsal', $id)->first();
     }
 
+    public function getTotalBangsal() {
+        return $this->countAllResults();
+    }
+
     public function tambahBangsal($data)
     {
 

@@ -41,6 +41,11 @@ class JenisDiet_model extends Model
         return $this->where('id_jenis_diet', $id)->first();
     }
 
+    
+    public function getTotalDiet() {
+        return $this->countAllResults();
+    }
+
     public function tambahJenisDiet($data)
     {
 
