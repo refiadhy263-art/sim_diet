@@ -150,12 +150,7 @@
 
 
     <?php if(session()->getFlashdata('msg')): ?>
-      swal.fire({
-        title: 'Info',
-        text: "<?= session()->getFlashdata('msg') ?>",
-        icon: 'info',
-        confirmButtonText: 'OK'
-      });
+      alert('<?= session()->getFlashdata('msg') ?>');
     <?php endif; ?>
   </script>
 </body>

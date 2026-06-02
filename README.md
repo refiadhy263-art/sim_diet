@@ -1,6 +1,6 @@
-# SIM_Diet
+# SIMDIET
 
-SIM_Diet adalah aplikasi manajemen nutrisi rumah sakit berbasis CodeIgniter 4. Aplikasi ini membantu ahli gizi dan admin rumah sakit mengelola pasien, bangsal, bed, jenis diet, bentuk diet, dan log aktivitas.
+SIMDIET adalah aplikasi manajemen nutrisi rumah sakit berbasis CodeIgniter 4. Aplikasi ini membantu ahli gizi dan admin rumah sakit mengelola pasien, bangsal, bed, jenis diet, bentuk diet, dan log aktivitas.
 
 ## Fitur Utama
 

@@ -55,6 +55,16 @@ class Pramusaji_model extends Model
 
         return $this->where('username', $username)->first();
     }
+
+
+    public function getUsernameBangsal($username, $id_bangsal)
+    {
+        return $this->join('users', 'users.id_users = pramusaji.id_users', 'left')
+                    ->where('users.username', $username)
+                    ->where('pramusaji.id_bangsal', $id_bangsal)
+                    ->first();
+    }
+    
     public function getIdPramusaji($id)
     {
 
