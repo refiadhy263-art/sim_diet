@@ -419,10 +419,11 @@ function simpanPerawat(event) {
     }
 
     const formData = new FormData(document.getElementById('perawatForm'));
-    
+
     fetch(`<?= base_url('perawat/save') ?>`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        credentials: 'same-origin'
     })
     .then(response => response.json())
     .then(data => {
@@ -475,8 +476,20 @@ function hapusPerawat(id) {
         cancelButtonText: 'Batal'
     }).then((result) => {
         if (result.isConfirmed) {
+            // Ambil CSRF token dari input form
+            const csrfInput = document.querySelector('input[name^="csrf"]');
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            if (csrfInput) {
+                headers['X-CSRF-TOKEN'] = csrfInput.value;
+            }
+            
             fetch(`<?= base_url('perawat/delete/') ?>${id}`, {
-                method: 'POST' 
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: headers
             })
             .then(response => response.json())
             .then(data => {
@@ -492,6 +505,10 @@ function hapusPerawat(id) {
                 } else {
                     Swal.fire('Gagal!', 'Data gagal dihapus.', 'error');
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Gagal!', 'Terjadi kesalahan saat menghapus data.', 'error');
             });
         }
     });

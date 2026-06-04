@@ -4,16 +4,19 @@ namespace App\Controllers;
 
 use App\Models\Logs_model;
 use App\Models\Bangsal_model;
+use App\Models\Pasien_model;
 
 class Bangsal extends BaseController
 {
     protected $bangsal;
     protected $logs;
+    protected $pasien;
 
     public function __construct()
     {
         $this->bangsal = new Bangsal_model();
         $this->logs = new Logs_model();
+        $this->pasien = new Pasien_model();
     }
 
     public function index()

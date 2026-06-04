@@ -4,16 +4,20 @@ namespace App\Controllers;
 
 use App\Models\JenisDiet_model;
 use App\Models\Logs_model;
+use App\Models\Pasien_model;
 
 class JenisDiet extends BaseController
 {
     protected $jenis_diet;
     protected $logs;
+    protected $pasien;
+
 
     public function __construct()
     {
         $this->jenis_diet = new JenisDiet_model();
         $this->logs = new Logs_model();
+        $this->pasien = new Pasien_model();
     }
 
     public function index()

@@ -26,6 +26,8 @@ class Filters extends BaseConfig
         'invalidchars'  => InvalidChars::class,
         'secureheaders' => SecureHeaders::class,
         'authenticate' => \App\Filters\Authenticate::class, // tambahkan ini
+        'auth' => \App\Filters\Authenticate::class,
+        'role' => \App\Filters\Authenticate::class,
         'redirectIfAuthenticated' => \App\Filters\RedirectIfAuthenticated::class, // tambahkan ini
     ];
 

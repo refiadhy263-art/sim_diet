@@ -223,8 +223,17 @@ function hapusDiet(id) {
         cancelButtonText: 'Batal'
     }).then((result) => {
         if (result.isConfirmed) {
-            fetch(`<?= base_url('jenis_diet/delete') ?>/${id}`, {
-                method: 'POST'
+            // Buat FormData untuk mengirim CSRF token
+            const formData = new FormData();
+            const csrfInput = document.querySelector('input[name^="csrf"]');
+            if (csrfInput) {
+                formData.append(csrfInput.name, csrfInput.value);
+            }
+            
+            fetch(`<?= base_url('jenis_diet/delete/') ?>${id}`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
             })
             .then(response => response.json())
             .then(data => {
@@ -246,6 +255,7 @@ function hapusDiet(id) {
                 }
             })
             .catch(error => {
+                console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Kesalahan',

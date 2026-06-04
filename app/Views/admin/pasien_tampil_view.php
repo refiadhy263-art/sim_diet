@@ -475,8 +475,19 @@ function hapusPasien(id) {
         cancelButtonText: 'Batal'
     }).then((result) => {
         if (result.isConfirmed) {
+            const csrfInput = document.querySelector('input[name^="csrf"]');
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            if (csrfInput) {
+                headers['X-CSRF-TOKEN'] = csrfInput.value;
+            }
+            
             fetch(`<?= base_url('pasien/delete/') ?>${id}`, {
-                method: 'POST' 
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: headers
             })
             .then(response => response.json())
             .then(data => {
@@ -492,6 +503,10 @@ function hapusPasien(id) {
                 } else {
                     Swal.fire('Gagal!', 'Data gagal dihapus.', 'error');
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Gagal!', 'Terjadi kesalahan saat menghapus data.', 'error');
             });
         }
     });

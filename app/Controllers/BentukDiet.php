@@ -4,16 +4,19 @@ namespace App\Controllers;
 
 use App\Models\BentukDiet_model;
 use App\Models\Logs_model;
+use App\Models\Pasien_model;
 
 class BentukDiet extends BaseController
 {
     protected $bentuk_diet;
     protected $logs;
+    protected $pasien;
 
     public function __construct()
     {
         $this->bentuk_diet = new BentukDiet_model();
         $this->logs = new Logs_model();
+        $this->pasien = new Pasien_model();
     }
 
     public function index()

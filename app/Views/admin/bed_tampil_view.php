@@ -146,11 +146,20 @@ function hapusBed(idBed, namaBed) {
         cancelButtonText: 'Batal'
     }).then((result) => {
         if (result.isConfirmed) {
+            const csrfInput = document.querySelector('input[name^="csrf"]');
+            const headers = {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json'
+            };
+            
+            if (csrfInput) {
+                headers['X-CSRF-TOKEN'] = csrfInput.value;
+            }
+            
             fetch(`<?= base_url('bed/delete/') ?>${idBed}`, {
                 method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
+                credentials: 'same-origin',
+                headers: headers
             })
             .then(response => response.json())
             .then(data => {
