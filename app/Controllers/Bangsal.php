@@ -5,22 +5,30 @@ namespace App\Controllers;
 use App\Models\Logs_model;
 use App\Models\Bangsal_model;
 use App\Models\Pasien_model;
+use App\Models\Bed_model;
 
 class Bangsal extends BaseController
 {
     protected $bangsal;
     protected $logs;
     protected $pasien;
+    protected $bed;
 
     public function __construct()
     {
+        
         $this->bangsal = new Bangsal_model();
+        $this->bed = new Bed_model();
         $this->logs = new Logs_model();
         $this->pasien = new Pasien_model();
     }
 
     public function index()
     {
+
+
+
+        
         $data = [
             'title' => 'Bangsal',
         ];
@@ -31,6 +39,9 @@ class Bangsal extends BaseController
     public function getData()
     {
         $data = $this->bangsal->getList();
+        foreach ($data as &$value) {
+            $value['kapasitas'] = $this->bed->getKapasitas($value['id_bangsal']);
+        }
         return $this->response->setJSON($data);
     }
 
@@ -45,7 +56,6 @@ class Bangsal extends BaseController
         $id_bangsal = $this->request->getPost('id_bangsal');
         $kd_bangsal = $this->request->getPost('kd_bangsal');
         $nama_bangsal = $this->request->getPost('nama_bangsal');
-        $kapasitas = $this->request->getPost('kapasitas');
 
         if (empty($nama_bangsal)) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Nama bangsal tidak boleh kosong.']);
@@ -53,10 +63,11 @@ class Bangsal extends BaseController
 
         $existingBangsal = $id_bangsal ? $this->bangsal->getIdBangsal($id_bangsal) : null;
 
+
+
         $data = [
             'kd_bangsal' => $kd_bangsal,
             'nama_bangsal' => $nama_bangsal,
-            'kapasitas' => $kapasitas,
         ];
 
         if ($id_bangsal && $existingBangsal) {

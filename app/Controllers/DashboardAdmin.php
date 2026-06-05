@@ -6,8 +6,10 @@ use App\Models\Users_model;
 use App\Models\Perawat_model;
 use App\Models\Pasien_model;
 use App\Models\Bangsal_model;
+use App\Models\Bed_model;
 use App\Models\JenisDiet_model;
 use App\Models\Logs_model;
+
 
 
 class DashboardAdmin extends BaseController
@@ -17,13 +19,15 @@ protected $users;
 protected $perawat;
 protected $pasien;
 protected $bangsal;
+protected $bed;
 protected $jenis_diet;
 protected $logs;
 
     public function __construct()
     {
         $this->users = new Users_model();
-        $this->perawat = new Perawat_model();   
+        $this->perawat = new Perawat_model();
+        $this->bed = new Bed_model();
         $this->pasien = new Pasien_model();
         $this->bangsal = new Bangsal_model();
         $this->jenis_diet = new JenisDiet_model();
@@ -63,8 +67,8 @@ protected $logs;
                     $count++;
                 }
             }
-            $kapasitas = (int)($b['kapasitas'] ?? 0);
-            $persen = $kapasitas > 0 ? ($count / $kapasitas) * 100 : 0;
+            $b['kapasitas'] = (int) $this->bed->getKapasitas($b['id_bangsal']);
+            $persen = $b['kapasitas'] > 0 ? ($count / $b['kapasitas']) * 100 : 0;
             $persen = min(100, round($persen, 2));
 
             $data['bangsalStats'][] = array_merge($b, [

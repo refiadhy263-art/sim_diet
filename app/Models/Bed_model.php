@@ -68,6 +68,11 @@ class Bed_model extends Model
                     ->where("bed.id_bed NOT IN ($bed_terpakai)", null, false) // false agar CI4 tidak menambahkan escape/tanda kutip otomatis
                     ->findAll();
     }
+
+    public function getKapasitas($id_bangsal)
+    {
+        return $this->where('id_bangsal', $id_bangsal)->countAllResults();
+    }
  
 
     public function tambahBed($data)

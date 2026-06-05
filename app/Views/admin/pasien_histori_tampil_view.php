@@ -79,7 +79,7 @@ function updateStatusPasien(pasienId, statusBaru, element) {
     const formData = new FormData();
     formData.append('id_pasien', pasienId);
     formData.append('status_rawat', statusBaru);
-    // formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>'); // Hapus komentar jika filter CSRF aktif
+    formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>'); // Hapus komentar jika filter CSRF aktif
 
     // Kirim data ke backend
     fetch('<?= site_url('pasien/kembalikan_dirawat') ?>', {

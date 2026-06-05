@@ -95,9 +95,7 @@
       </nav>
 
       <!-- Footer Actions -->
-      <button onclick="resetAllData()" id="resetDataBtn" class="w-full flex items-center justify-center gap-2 py-2 text-sm text-orange-600 hover:bg-orange-50 rounded-lg mt-2 transition <?= active_page('resetAllData') ?>">
-        <i class="fi fi-rr-refresh flex items-center"></i> Reset Data Awal
-      </button>
+     
       <div class="p-4 border-t border-gray-200">
         <a href="<?= base_url('logout') ?>" class="w-full flex items-center justify-center gap-2 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition">
           <i class="fi fi-rr-sign-out-alt flex items-center"></i> Keluar

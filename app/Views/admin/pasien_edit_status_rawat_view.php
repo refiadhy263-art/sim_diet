@@ -59,8 +59,20 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/2.3.8/js/dataTables.js"></script>
 <script src="https://cdn.datatables.net/2.3.8/js/dataTables.tailwindcss.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
+// Helper function untuk mapping status pasien ke label dan warna
+function rawatStatus(statusCode) {
+    const statusMap = {
+        '0': { label: 'Dirawat', color: 'bg-blue-100 text-blue-800' },
+        '1': { label: 'Pulang', color: 'bg-green-100 text-green-800' },
+        '2': { label: 'Meninggal', color: 'bg-red-100 text-red-800' },
+        '3': { label: 'Pindah Bangsal', color: 'bg-yellow-100 text-yellow-800' }
+    };
+    return statusMap[statusCode] || { label: 'Unknown', color: 'bg-gray-100 text-gray-800' };
+}
+
 function updateStatusPasien(pasienId, statusBaru, element) {
     // 1. Validasi jika user memilih 'Pindah Bangsal' (bisa diarahkan ke fungsi/halaman lain)
     if (statusBaru === '3') {
@@ -70,23 +82,32 @@ function updateStatusPasien(pasienId, statusBaru, element) {
 
     // 2. Konfirmasi tindakan ke user untuk status krusial
     if (statusBaru === '2' || statusBaru === '1') {
-        const konfirmasi = swal.fire({
+        Swal.fire({
             title: 'Konfirmasi',
-            text: `Apakah Anda yakin ingin mengubah status pasien ini menjadi "${statusBaru.toUpperCase()}"? Tindakan ini akan mengosongkan bed.`,
+            text: `Apakah Anda yakin ingin mengubah status pasien ini menjadi "${rawatStatus(statusBaru)['label']}"? Tindakan ini akan mengosongkan bed.`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
             cancelButtonColor: '#d33',
             confirmButtonText: 'Ya, ubah!',
             cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (!result.isConfirmed) {
+                element.value = '0'; // Reset kembali ke 'dirawat' jika user membatalkan
+                return;
+            }
+            // Lanjutkan proses update jika user konfirmasi
+            proceedWithStatusUpdate(pasienId, statusBaru, element);
         });
-        if (!konfirmasi) {
-            element.value = '0'; // Reset kembali ke 'dirawat' jika user membatalkan
-            return;
-        }
+        return;
     }
 
-    // 3. Siapkan data untuk dikirim via POST
+    // Jika bukan status krusial, langsung proses
+    proceedWithStatusUpdate(pasienId, statusBaru, element);
+}
+
+// Fungsi terpisah untuk handle proses update setelah konfirmasi
+function proceedWithStatusUpdate(pasienId, statusBaru, element) {
     const formData = new FormData();
     formData.append('id_pasien', pasienId);
     formData.append('status_rawat', statusBaru);
@@ -148,6 +169,7 @@ function updateStatusPasien(pasienId, statusBaru, element) {
 }
 
 function showModalPindahBangsal(pasienId, selectElement, oldStatus) {
+    
     // 1. Tarik data ketersediaan bangsal secara real-time dari server via AJAX
     fetch('/pasien/getBangsalTersedia', {
         method: 'GET',
@@ -195,6 +217,7 @@ function showModalPindahBangsal(pasienId, selectElement, oldStatus) {
             const modal = document.createElement('div');
             modal.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4'; // CSS backdrop modal Tailwind
             modal.innerHTML = `
+            
                 <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl transform transition-all scale-100">
                     <h3 class="text-xl font-bold mb-2 flex items-center gap-2"><i class="fi fi-rr-refresh text-blue-600 flex items-center"></i> Pindah Bangsal</h3>
                     <p class="mb-4 text-sm text-gray-500">Pilih bangsal dan bed kosong tujuan untuk pasien ini.</p>
@@ -250,7 +273,7 @@ function showModalPindahBangsal(pasienId, selectElement, oldStatus) {
                 formData.append('id_bed', newBedId);
 
                 // Tambahkan token CSRF jika filter aktif di CodeIgniter
-                // formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+                formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
 
                 fetch('/pasien/pindah_bangsal', {
                     method: 'POST',
@@ -275,7 +298,7 @@ function showModalPindahBangsal(pasienId, selectElement, oldStatus) {
                             if (row) row.remove();
                         }
                     } else {
-                        swal.fire({
+                        Swal.fire({
                             icon: 'error',
                             title: 'Gagal!',
                             text: 'Gagal memindahkan: ' + data.message
@@ -284,7 +307,7 @@ function showModalPindahBangsal(pasienId, selectElement, oldStatus) {
                 })
                 .catch(err => {
                     console.error(err);
-                    swal.fire({
+                    Swal.fire({
                         icon: 'error',
                         title: 'Terjadi Kesalahan',
                         text: 'Terjadi error koneksi saat memproses perpindahan.'
@@ -294,7 +317,7 @@ function showModalPindahBangsal(pasienId, selectElement, oldStatus) {
         })
         .catch(err => {
             console.error(err);
-            swal.fire({
+            Swal.fire({
                 icon: 'error',
                 title: 'Gagal',
                 text: 'Gagal memuat status ketersediaan bangsal dari server.'

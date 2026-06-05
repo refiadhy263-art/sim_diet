@@ -421,6 +421,27 @@ protected $logs;
             return "Bangsal tidak ditemukan.";
         }
 
+         // 3. Logika Penentuan Jadwal Aktif
+        date_default_timezone_set('Asia/Jakarta');
+        $jam   = (int) date('H');
+        $menit = (int) date('i');
+        $jadwalAktif = 'Belum ada jadwal';
+
+      
+        if ($jam < 5 || ($jam == 5 && $menit < 30)) {
+            $jam_aktif = '05:30';
+           $jadwalAktif = 'Belum Ada'; $next = 'Makan Pagi (05:30)';
+        } elseif ($jam < 10) {
+            $jam_aktif = '10:00';
+            $jadwalAktif = 'Makan Pagi (05:30)'; $next = 'Makan Siang (10:00)';
+        } elseif ($jam < 15 || ($jam == 15 && $menit < 30)) {
+            $jam_aktif = '15:30';
+            $jadwalAktif = 'Makan Siang (10:00)'; $next = 'Makan Malam (15:30)';
+        } else {
+            $jam_aktif = '05:30';
+            $jadwalAktif = 'Makan Malam (15:30)'; $next = 'Makan Pagi (05:30 Besok)';
+        }
+
         $pasien = $this->pasien->getPasienDirawat($id_bangsal); // Pastikan fungsi ini ada di Pasien_model
 
         // Hitung Rekap Diet & Status
@@ -430,7 +451,7 @@ protected $logs;
 
         foreach ($pasien as $p) {
             if (isset($p['status_order'])) {
-                if ($p['status_order'] === '0') $hasMenunggu = true;
+                if ($p['status_order'] === '0' && $jam_aktif === date('H:i')) $hasMenunggu = true;
                 if ($p['status_order'] === '1') $hasDiproses = true;
             }
 

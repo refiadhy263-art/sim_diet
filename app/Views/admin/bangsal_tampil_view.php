@@ -47,10 +47,7 @@
                     <label class="block text-sm font-semibold text-gray-600 mb-1">Nama Bangsal</label>
                     <input type="text" id="nama_bangsal" name="nama_bangsal" required class="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="Contoh: Kamar 1">
                 </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-600 mb-1">Kapasitas</label>
-                    <input type="number" id="kapasitas" name="kapasitas" min="0" required class="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="Contoh: 4">
-                </div>
+               
             </div>
 
             <!-- Modal Action Buttons -->
@@ -157,8 +154,7 @@ function editBangsalModal(id) {
             document.getElementById('id_bangsal').value = data.id_bangsal;
             document.getElementById('kd_bangsal').value = data.kd_bangsal;
             document.getElementById('nama_bangsal').value = data.nama_bangsal;
-            document.getElementById('kapasitas').value = data.kapasitas;
-
+            
             const modal = document.getElementById('bangsalModal');
             modal.classList.remove('hidden');
             setTimeout(() => {
