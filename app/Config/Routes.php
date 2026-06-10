@@ -120,6 +120,15 @@ $routes->group(
         $routes->post('bed/update', 'Bed::update');
         $routes->post('bed/delete/(:num)', 'Bed::delete/$1');
 
+
+        //jadwal_diet
+        $routes->get('jadwal_diet', 'JadwalDiet::index');
+        $routes->get('jadwal_diet/getData', 'JadwalDiet::getData');
+        $routes->post('jadwal_diet/save', 'JadwalDiet::save');
+        $routes->get('jadwal_diet/edit/(:num)', 'JadwalDiet::edit/$1');
+        $routes->post('jadwal_diet/update', 'JadwalDiet::update');
+        $routes->post('jadwal_diet/delete/(:num)', 'JadwalDiet::delete/$1');
+
         //logs
         $routes->get('logs', 'Logs::index');
         $routes->get('logs/getData', 'Logs::getData');

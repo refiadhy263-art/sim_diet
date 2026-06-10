@@ -64,6 +64,8 @@ class Pramusaji_model extends Model
                     ->where('pramusaji.id_bangsal', $id_bangsal)
                     ->first();
     }
+
+    
     
     public function getIdPramusaji($id)
     {

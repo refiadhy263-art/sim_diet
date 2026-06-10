@@ -59,13 +59,13 @@
                                 <td class="p-3"><?= esc($p['nama_bentuk_diet'] ?? 'Biasa') ?></td>
                                 <td class="p-3 bg-orange-50 text-red-600 font-bold italic text-xs"><?= esc($p['keterangan'] ?? '-') ?></td>
                                 <td class="p-3">
-                                    <span class="px-2 py-1 rounded font-bold text-xs uppercase bg-gray-200">
-                                        <?= esc(orderStatus($p['status_order'] ?? '0')['label']) ?>
+                                    <span class="px-2 py-1 rounded font-bold text-xs uppercase <?= esc(orderStatus($p['status_order'])['color']) ?>">
+                                        <?= esc(orderStatus($p['status_order'])['label']) ?>
                                     </span>
                                 </td>
                                 <td class="p-3 text-center no-print">
                                     <button onclick="printLabel('<?= esc($p['id_pasien']) ?>')" class="text-xs bg-gray-100 px-3 py-1 rounded-lg font-bold hover:bg-gray-200 transition-all">
-                                        🖨️ Cetak
+                                        <i class="fi fi-rr-print mr-2"></i> Cetak
                                     </button>
                                 </td>
                             </tr>

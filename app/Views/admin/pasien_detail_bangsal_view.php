@@ -183,7 +183,7 @@ function prosesBatchStatus(idBangsal, statusLama, statusBaru) {
             formData.append('id_bangsal', idBangsal);
             formData.append('status_lama', statusLama);
             formData.append('status_baru', statusBaru);
-            // formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>'); // Buka komentar jika CSRF aktif
+            formData.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>'); // Buka komentar jika CSRF aktif
 
             // 4. Kirim ke server
             fetch('<?= site_url('pasien/update_batch_status') ?>', {

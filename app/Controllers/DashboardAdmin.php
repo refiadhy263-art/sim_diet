@@ -9,6 +9,8 @@ use App\Models\Bangsal_model;
 use App\Models\Bed_model;
 use App\Models\JenisDiet_model;
 use App\Models\Logs_model;
+use App\Models\Pramusaji_model;
+use App\Models\JadwalDiet_model;
 
 
 
@@ -17,21 +19,89 @@ class DashboardAdmin extends BaseController
 
 protected $users;
 protected $perawat;
+protected $pramusaji;
 protected $pasien;
 protected $bangsal;
 protected $bed;
 protected $jenis_diet;
 protected $logs;
+protected $jadwal_diet;
 
     public function __construct()
     {
         $this->users = new Users_model();
         $this->perawat = new Perawat_model();
+        $this->pramusaji = new Pramusaji_model();
         $this->bed = new Bed_model();
         $this->pasien = new Pasien_model();
         $this->bangsal = new Bangsal_model();
         $this->jenis_diet = new JenisDiet_model();
+        $this->jadwal_diet = new JadwalDiet_model();
         $this->logs = new Logs_model();
+    }
+
+    protected function getDefaultJadwalDiet()
+    {
+        return [
+            'jadwal_pagi' => '05:30',
+            'jadwal_siang' => '10:00',
+            'jadwal_malam' => '15:30',
+        ];
+    }
+
+    protected function getJadwalDietConfig()
+    {
+        $jadwalList = $this->jadwal_diet->getAll();
+        $jadwal = $jadwalList[0] ?? null;
+
+        if (empty($jadwal) || empty($jadwal['jadwal_pagi']) || empty($jadwal['jadwal_siang']) || empty($jadwal['jadwal_malam'])) {
+            return $this->getDefaultJadwalDiet();
+        }
+
+        return [
+            'jadwal_pagi' => substr($jadwal['jadwal_pagi'], 0, 5),
+            'jadwal_siang' => substr($jadwal['jadwal_siang'], 0, 5),
+            'jadwal_malam' => substr($jadwal['jadwal_malam'], 0, 5),
+        ];
+    }
+
+    protected function getJadwalAktifFromDb()
+    {
+        date_default_timezone_set('Asia/Jakarta');
+        $now = date('H:i');
+        $jadwal = $this->getJadwalDietConfig();
+
+        $pagi = $jadwal['jadwal_pagi'];
+        $siang = $jadwal['jadwal_siang'];
+        $malam = $jadwal['jadwal_malam'];
+
+        $next = 'Belum Ada';
+        $shift = '';
+        $aktif = 'Belum ada jadwal';
+
+        if ($now >= $pagi && $now < $siang) {
+            $shift = 'pagi';
+            $aktif = sprintf('Makan Pagi (%s - %s)', $pagi, date('H:i', strtotime($siang . ' -1 minute')));
+            $next = sprintf('Makan Siang (%s)', $siang);
+        } elseif ($now >= $siang && $now < $malam) {
+            $shift = 'siang';
+            $aktif = sprintf('Makan Siang (%s - %s)', $siang, date('H:i', strtotime($malam . ' -1 minute')));
+            $next = sprintf('Makan Malam (%s)', $malam);
+        } else {
+            $shift = 'malam';
+            $aktif = sprintf('Makan Malam (%s - %s)', $malam, date('H:i', strtotime($pagi . ' -1 minute')));
+            $next = sprintf('Makan Pagi (%s Besok)', $pagi);
+        }
+
+        return [
+            'waktu' => date('H:i:s'),
+            'aktif' => $aktif,
+            'next' => $next,
+            'shift' => $shift,
+            'jadwal_pagi' => $pagi,
+            'jadwal_siang' => $siang,
+            'jadwal_malam' => $malam,
+        ];
     }
 
     public function index()
@@ -189,28 +259,15 @@ protected $logs;
             }
         }
 
-        // 3. Logika Penentuan Jadwal Aktif
-        date_default_timezone_set('Asia/Jakarta');
-        $jam   = (int) date('H');
-        $menit = (int) date('i');
-        $jadwalAktif = 'Belum ada jadwal';
-
-      
-        if ($jam < 5 || ($jam == 5 && $menit < 30)) {
-           $jadwalAktif = 'Belum Ada'; $next = 'Makan Pagi (05:30)';
-        } elseif ($jam < 10) {
-            $jadwalAktif = 'Makan Pagi (05:30)'; $next = 'Makan Siang (10:00)';
-        } elseif ($jam < 15 || ($jam == 15 && $menit < 30)) {
-            $jadwalAktif = 'Makan Siang (10:00)'; $next = 'Makan Malam (15:30)';
-        } else {
-            $jadwalAktif = 'Makan Malam (15:30)'; $next = 'Makan Pagi (05:30 Besok)';
-        }
+        // 3. Logika Penentuan Jadwal Aktif dari database
+        $jadwalAktifData = $this->getJadwalAktifFromDb();
 
         // 4. Siapkan Data untuk View
         $data = [
             'title'       => 'Dashboard Bangsal',
-            'waktu'       => date('H:i:s'),
-            'jadwalAktif' => $jadwalAktif,
+            'waktu'       => $jadwalAktifData['waktu'],
+            'jadwalAktif' => $jadwalAktifData['aktif'],
+            'next'        => $jadwalAktifData['next'],
             'dietCount'   => $dietCount,
             'bentukCount' => $bentukCount,
             'orderStats'  => $orderStats
@@ -221,30 +278,43 @@ protected $logs;
     public function getGiziDashboardData()
     {
 
-        // 1. Logika Waktu & Jadwal
+         // 1. Setup Zona Waktu
         date_default_timezone_set('Asia/Jakarta');
-        
-       
         $tanggalSekarang = hari(date('w')) . ', ' . tanggal_indo(date('Y-m-d'));
         $waktuSekarang   = date('H:i:s');
-        
-        $jam   = (int) date('H');
-        $menit = (int) date('i');
-        
-        // Penentuan Jadwal Aktif
-        if ($jam < 5 || ($jam == 5 && $menit < 30)) {
-            $aktif = 'Belum Ada'; $next = 'Makan Pagi (05:30)';
-        } elseif ($jam < 10) {
-            $aktif = 'Makan Pagi'; $next = 'Makan Siang (10:00)';
-        } elseif ($jam < 15 || ($jam == 15 && $menit < 30)) {
-            $aktif = 'Makan Siang'; $next = 'Makan Malam (15:30)';
-        } else {
-            $aktif = 'Makan Malam'; $next = 'Makan Pagi (05:30 Besok)';
-        }
+        $jam_menit       = date('H:i');
+        $tanggal         = date('Y-m-d');
 
-        // 2. Mengambil Data dan Perhitungan Statistik per Bangsal
+        $jadwalAktifData = $this->getJadwalAktifFromDb();
+        $jadwalAktif = $jadwalAktifData['aktif'];
+        $next = $jadwalAktifData['next'];
+        $shift_sekarang = $jadwalAktifData['shift'];
+        $is_waktu_proses = !empty($shift_sekarang);
+        $kode_shift_sekarang = $tanggal . '_' . $shift_sekarang; // Contoh: 2026-06-05_siang
+
+       // ====================================================================
+        // 2. LOGIKA AUTO-RESET (Dijalankan SEBELUM mengambil data pasien)
+        // ====================================================================
         $bangsalList = $this->bangsal->getList();
-        $pasienAktif = $this->pasien->getList(); // Ambil semua pasien yang sedang dirawat tanpa filter bangsal
+        
+        // foreach ($bangsalList as $b) {
+        //     // Cek apakah bangsal ini sudah di-reset untuk shift saat ini
+        //     $shift_terakhir_bangsal = $b['reset_order'];
+        //     //print_r($shift_terakhir_bangsal);
+
+        //     if ($shift_terakhir_bangsal !== $kode_shift_sekarang) {
+        //         // A. Reset status order semua pasien di bangsal ini menjadi '0' (Menunggu)
+        //         // (Menggunakan fungsi reset order aman yang sudah Anda buat sebelumnya)
+        //         $this->pasien->getResetOrderBangsal($b['id_bangsal']);
+
+        //         // B. Update kolom reset_order di tabel bangsal agar tidak di-reset berkali-kali
+        //         $this->bangsal->update($b['id_bangsal'], ['reset_order' => $kode_shift_sekarang]);
+
+        //         // Opsional: Catat di Log Aktivitas jika Anda ingin melacaknya
+        //          $this->logs->saveLog('Reset Shift', "Shift {$shift_sekarang} dimulai", 'Sistem');
+        //     }
+        // }
+      $pasienAktif = $this->pasien->getList(); // Ambil semua pasien yang sedang dirawat tanpa filter bangsal
 
         $bStats = [];
         foreach ($bangsalList as $b) {
@@ -282,16 +352,18 @@ protected $logs;
             'status'          => 'success',
             'tanggalSekarang' => $tanggalSekarang,
             'waktuSekarang'   => $waktuSekarang,
-            'aktif'           => $aktif,
+            'aktif'           => $jadwalAktif,
             'next'            => $next,
-            'bStats'          => $bStats
+            'bStats'          => $bStats,
+            //'shift_terakhir_bangsal' =>$shift_terakhir_bangsal,
+            'kode_shift_sekarang' => $kode_shift_sekarang
         ]);
     }
 
 
 
     // Pramusaji Dashboard Functions (Role 4)
-    public function getDashboardData()
+    public function getPramusajiDashboardData()
     {
         if (session()->get('role') != '4') {
             return $this->response->setJSON(['error' => 'Unauthorized']);
@@ -355,44 +427,26 @@ protected $logs;
         }
 
         $json = $this->request->getJSON(true) ?? [];
-        $username = trim((string)($json['username'] ?? ''));
-        $password = (string)($json['password'] ?? '');
-        $session = session();
-        $id_bangsal = (int)($session->get('id_bangsal') ?? 0);
-
-        // Validasi input
-        if ($username === '' || $password === '') {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Username dan password harus diisi']);
-        }
-
-        if ($id_bangsal <= 0) {
+            $username = session()->get('username') ?? '';
+            $id_bangsal = (int)(session()->get('id_bangsal') ?? 0);
+       if ($id_bangsal <= 0) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Bangsal tidak ditemukan']);
         }
 
-        // Cari perawat berdasarkan username dan bangsal
-        $perawat = $this->perawat->getUsernameBangsal($username, $id_bangsal);
-
-        if (!$perawat) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Perawat tidak ditemukan untuk bangsal ini.']);
-        }
-
-        // Verifikasi password
-        $hashedPassword = $perawat['password'] ?? null;
-        if (!$hashedPassword || !password_verify($password, $hashedPassword)) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Password salah!']);
-        }
+        $pramusaji = $this->pramusaji->getUsernameBangsal($username ?? '', $id_bangsal);
 
         try {
             $affectedRows = $this->pasien->updateBatchStatus($id_bangsal, '3', '4');
             
             if ($affectedRows > 0) {
-                $this->logs->saveLog('Verifikasi Penerimaan', "Perawat {$perawat['nama_perawat']} memverifikasi penerimaan $affectedRows porsi");
+                $this->logs->saveLog('Verifikasi Penerimaan', "Pramusaji {$pramusaji['nama_pramusaji']} memverifikasi penerimaan $affectedRows porsi");
             }
 
             return $this->response->setJSON([
                 'status' => 'success',
-                'message' => " Order diselesaikan dan diverifikasi oleh {$perawat['nama_perawat']}.",
-                'perawatName' => $perawat['nama_perawat']
+                'message' => " Order diselesaikan oleh {$pramusaji['nama_pramusaji']}.",
+                'pramusajiName' => $pramusaji['nama_pramusaji'],
+                'count' => $affectedRows
             ]);
         } catch (\Exception $e) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Terjadi kesalahan: ' . $e->getMessage()]);

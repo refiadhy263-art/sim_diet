@@ -271,18 +271,13 @@ protected $logs;
 
     public function pulang_meninggal()
     {
-     
-        $bulan = $this->request->getGet('bulan');
-        $tahun = $this->request->getGet('tahun');
-
-      $id_bangsal = session()->get('id_bangsal');
+        $id_bangsal = session()->get('id_bangsal');
         $nama_bangsal = $this->bangsal->getIdBangsal($id_bangsal)['nama_bangsal'] ?? 'Semua Bangsal';
         $data = [
             'title' => 'Update Status Pulang/Meninggal Pasien',
-            'pasienList' => $this->pasien->getPasienPulangMeninggal($id_bangsal, $bulan, $tahun),
+            'pasienList' => $this->pasien->getPasienPulangMeninggal($id_bangsal),
             'nama_bangsal' => $nama_bangsal
         ];
-       // dd($data['pasienList']);
         return view('admin/pasien_histori_tampil_view', $data);
     }
 

@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function showModalTambahPramusaji() {
-    document.getElementById('modalTitle').innerHTML = '<i class="fi fi-rr-doctor text-blue-600 flex items-center"></i> Tambah Pramusaji';
+    document.getElementById('modalTitle').innerHTML = '<i class="fi fi-rr-restaurant text-blue-600 flex items-center"></i> Tambah Pramusaji';
     document.getElementById('pramusajiForm').reset();
     document.getElementById('id_pramusaji').value = ''; 
     document.getElementById('password').setAttribute('required', 'required'); 

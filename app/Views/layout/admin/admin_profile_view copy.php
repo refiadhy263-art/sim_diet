@@ -321,7 +321,7 @@ function renderDashboardGizi(data) {
         });
 
         function loadDashboardData() {
-            fetch('<?php echo base_url('dashboard/getPramusajiDashboardData'); ?>')
+            fetch('<?php echo base_url('dashboard/getDashboardData'); ?>')
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
@@ -354,119 +354,100 @@ function renderDashboardGizi(data) {
                 });
         }
 
-function prosesAntar() {
-    Swal.fire({
-        title: 'Konfirmasi Antar',
-        text: 'Apakah Anda yakin ingin memproses semua makanan menjadi SEDANG DIANTAR?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6', // Warna biru
-        cancelButtonColor: '#d33',     // Warna merah
-        confirmButtonText: 'Ya, Proses!',
-        cancelButtonText: 'Batal'
-    }).then((result) => {
-        // Jika user klik "Ya, Proses!"
-        if (result.isConfirmed) {
-            
-            // Opsional: Tampilkan animasi loading saat fetch berjalan
-            Swal.showLoading();
+        function prosesAntar() {
+            if (alert('Apakah Anda yakin ingin memproses semua makanan menjadi SEDANG DIANTAR?')) {
+                // Get CSRF token from meta tag
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-
-            fetch('<?php echo base_url('dashboard/prosesAntar'); ?>', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': csrfToken
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Alert Sukses
-                    Swal.fire({
-                        title: 'Berhasil!',
-                        text: data.message,
-                        icon: 'success'
-                    });
-                    loadDashboardData();
-                } else {
-                    // Alert Gagal dari Controller
-                    Swal.fire({
-                        title: 'Gagal!',
-                        text: data.message,
-                        icon: 'error'
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                // Alert Error Sistem
-                Swal.fire({
-                    title: 'Error!',
-                    text: 'Terjadi kesalahan saat memproses antar.',
-                    icon: 'error'
+                fetch('<?php echo base_url('dashboard/prosesAntar'); ?>', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert(data.message);
+                        loadDashboardData();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Terjadi kesalahan saat memproses antar');
                 });
-            });
+            }
         }
-    });
-}
 
-function showVerifikasi() {
-    Swal.fire({
-        title: 'Verifikasi Penerimaan',
-        text: 'Apakah pasien sudah menerima makanannya? Klik Ya untuk memverifikasi semua pesanan menjadi SELESAI.',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#28a745', // Warna hijau
-        cancelButtonColor: '#d33',     // Warna merah
-        confirmButtonText: 'Ya, Selesai!',
-        cancelButtonText: 'Batal'
-    }).then((result) => {
-        // Logika IF yang memastikan proses hanya jalan kalau diklik "Ya"
-        if (result.isConfirmed) {
-            
-            Swal.showLoading();
+        function showVerifikasi() {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black/50 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 no-print';
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
+                    <h3 class="text-xl font-bold mb-2 text-emerald-700"><i class="fi fi-rr-user-check"></i> Verifikasi Penerimaan</h3>
+                    <p class="text-sm text-gray-500 mb-3 font-medium">Perawat bangsal wajib memvalidasi penerimaan makanan di lokasi.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Username Perawat</label>
+                            <input id="vUser" name="username" class="w-full border rounded-xl p-3 bg-gray-50" placeholder="Username...">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Password</label>
+                            <input type="password" id="vPass" name="password" class="w-full border rounded-xl p-3 bg-gray-50" placeholder="Password...">
+                        </div>
+                    </div>
+                    <div class="flex gap-3 mt-4">
+                        <button id="vBtn" class="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700">Verifikasi & Selesai</button>
+                        <button onclick="this.closest('.fixed').remove()" class="px-6 py-3 bg-gray-100 text-gray-500 rounded-xl font-bold hover:bg-gray-200">Batal</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
 
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            modal.querySelector('#vBtn').onclick = () => {
+                const username = modal.querySelector('#vUser').value;
+                const password = modal.querySelector('#vPass').value;
 
-            fetch('<?php echo base_url('dashboard/verifyReception'); ?>', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': csrfToken
+                if (!username || !password) {
+                    alert('Username dan password tidak boleh kosong');
+                    return;
                 }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    Swal.fire({
-                        title: 'Selesai!',
-                        text: data.message,
-                        icon: 'success'
-                    });
-                    loadDashboardData();
-                } else {
-                    Swal.fire({
-                        title: 'Gagal!',
-                        text: data.message,
-                        icon: 'error'
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire({
-                    title: 'Error!',
-                    text: 'Terjadi kesalahan saat memverifikasi penerimaan.',
-                    icon: 'error'
+
+                // Get CSRF token from meta tag
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+                fetch('<?php echo base_url('dashboard/verifyReception'); ?>', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert(data.message);
+                        modal.remove();
+                        loadDashboardData();
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Terjadi kesalahan saat verifikasi');
                 });
-            }); 
+            };
         }
-    });
-}
     </script>
 <?php else: ?>
 <div class="space-y-6">

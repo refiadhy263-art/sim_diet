@@ -16,6 +16,7 @@ class Bangsal_model extends Model
         'nama_bangsal',
         'kapasitas',
         'icon',
+        'reset_order',
         'created_at',
         'updated_at'
 

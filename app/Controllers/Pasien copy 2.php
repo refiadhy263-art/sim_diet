@@ -282,7 +282,6 @@ protected $logs;
             'pasienList' => $this->pasien->getPasienPulangMeninggal($id_bangsal, $bulan, $tahun),
             'nama_bangsal' => $nama_bangsal
         ];
-       // dd($data['pasienList']);
         return view('admin/pasien_histori_tampil_view', $data);
     }
 

@@ -50,6 +50,10 @@
         <a href="<?= base_url('bed') ?>" class="sidebar-item w-full flex items-center gap-3 px-4 py-2 rounded-xl text-left text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition <?= active_page('bed') ?>">
           <i class="fi fi-rr-bed text-lg flex items-center"></i> Manajemen Bed
         </a>
+        <a href="<?= base_url('jadwal_diet') ?>" class="sidebar-item w-full flex items-center gap-3 px-4 py-2 rounded-xl text-left text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition <?= active_page('jadwal_diet') ?>">
+          <i class="fi fi-rr-clock text-lg flex items-center"></i> Jadwal Diet
+        </a>
+
         <?php }  if(session()->get('role') == '2'){ ?>
         <a href="<?= base_url('dashboard') ?>" class="sidebar-item w-full flex items-center gap-3 px-4 py-2 rounded-xl text-left text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition <?= active_page('dashboard') ?>">
           <i class="fi fi-rr-apps text-lg flex items-center"></i> Dashboard
@@ -90,7 +94,7 @@
 
 
         <a href="<?= base_url('logs') ?>" class="sidebar-item w-full flex items-center gap-3 px-4 py-2 rounded-xl text-left text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition <?= active_page('logs') ?>">
-          <i class="fi fi-rr-document-signed text-lg flex items-center"></i> Log Aktivitas
+          <i class="fi fi-rr-time-past text-lg flex items-center"></i> Log Aktivitas
         </a>
       </nav>
 

@@ -24,6 +24,15 @@ class Users_model extends Model
             ->findAll();
     }
 
+    public function getLogsUsers()
+    {
+        return $this->select('users.*, COALESCE(perawat.id_bangsal, pramusaji.id_bangsal) as id_bangsal')
+                                  ->join('perawat', 'perawat.id_users = users.id_users', 'left')
+                                  ->join('pramusaji', 'pramusaji.id_users = users.id_users', 'left')
+                                  ->findAll();
+    }
+
+
 
 
 

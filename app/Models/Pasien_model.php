@@ -74,7 +74,13 @@ class Pasien_model extends Model
                     ->findAll();
     }
 
-
+    public function getResetOrderBangsal($id_bangsal)
+    {
+        return $this->builder()
+             ->where('id_bangsal', $id_bangsal)
+             ->where('status_rawat', '0')
+             ->update(['status_order' => '0']);
+    }
 
     public function getCountPasienDirawat($id_bangsal)
     {
@@ -93,14 +99,16 @@ class Pasien_model extends Model
     }
 
 
-    public function getPasienPulangMeninggal($id_bangsal)
+    public function getPasienPulangMeninggal($id_bangsal, $bulan, $tahun)
     {
-        return $this->select('pasien.*, bangsal.nama_bangsal, bed.nama_bed, jenis_diet.nama_jenis_diet, bentuk_diet.nama_bentuk_diet')
-                    ->join('bangsal', 'bangsal.id_bangsal = pasien.id_bangsal')
-                    ->join('bed', 'bed.id_bed = pasien.id_bed', 'left')
-                    ->join('jenis_diet', 'jenis_diet.id_jenis_diet = pasien.id_jenis_diet', 'left')
+       return $this->select('pasien.*, bangsal.nama_bangsal, bed.nama_bed, jenis_diet.nama_jenis_diet, bentuk_diet.nama_bentuk_diet')
+             ->join('bangsal', 'bangsal.id_bangsal = pasien.id_bangsal')
+             ->join('bed', 'bed.id_bed = pasien.id_bed', 'left')
+             ->join('jenis_diet', 'jenis_diet.id_jenis_diet = pasien.id_jenis_diet', 'left')
                     ->join('bentuk_diet', 'bentuk_diet.id_bentuk_diet = pasien.id_bentuk_diet', 'left')
                     ->where('pasien.id_bangsal', $id_bangsal)
+                    ->where('MONTH(pasien.updated_at)', $bulan)
+                    ->where('YEAR(pasien.updated_at)', $tahun)
                     ->whereIn('pasien.status_rawat', ['1', '2'])
                     ->orderBy('pasien.updated_at', 'desc')
                     ->findAll();
