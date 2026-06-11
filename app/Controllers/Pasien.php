@@ -272,8 +272,8 @@ protected $logs;
     public function pulang_meninggal()
     {
      
-        $bulan = $this->request->getGet('bulan');
-        $tahun = $this->request->getGet('tahun');
+        $bulan = $this->request->getGet('bulan') ?? date('m');
+        $tahun = $this->request->getGet('tahun') ?? date('Y');
 
       $id_bangsal = session()->get('id_bangsal');
         $nama_bangsal = $this->bangsal->getIdBangsal($id_bangsal)['nama_bangsal'] ?? 'Semua Bangsal';

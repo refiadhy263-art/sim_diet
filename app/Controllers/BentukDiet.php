@@ -22,7 +22,7 @@ class BentukDiet extends BaseController
     public function index()
     {
         $data = [
-            'title' => 'Bentuk Diet',
+            'title' => 'Manajemen Bentuk Diet',
         ];
 
         return view('admin/bentuk_diet_tampil_view', $data);

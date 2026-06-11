@@ -118,10 +118,28 @@ protected $jadwal_diet;
             $data['title'] = 'Dashboard';
         }
 
-        // Get active hospitalized patients
-        $allPasienDirawat = $this->pasien->getList();
+        // Tentukan jadwal aktif dan kode shift sekarang (dipakai untuk auto-reset)
+        date_default_timezone_set('Asia/Jakarta');
+        $tanggal = date('Y-m-d');
+        $jadwalAktifDataForReset = $this->getJadwalAktifFromDb();
+        $shift_sekarang = $jadwalAktifDataForReset['shift'] ?? '';
+        $kode_shift_sekarang = $tanggal . '_' . $shift_sekarang;
 
+        // Ambil daftar bangsal dan lakukan auto-reset jika belum untuk shift ini
         $bangsalList = $this->bangsal->getList();
+        foreach ($bangsalList as $b) {
+            $lastReset = $b['reset_order'] ?? '';
+            if ($shift_sekarang && $lastReset !== $kode_shift_sekarang) {
+                // Reset status_order untuk bangsal ini
+                $this->pasien->getResetOrderBangsal($b['id_bangsal']);
+                // Update flag reset di bangsal agar tidak di-reset ulang
+                $this->bangsal->update($b['id_bangsal'], ['reset_order' => $kode_shift_sekarang]);
+                $this->logs->saveLog('Reset Shift', "Auto-reset order untuk bangsal {$b['id_bangsal']} ke {$kode_shift_sekarang}");
+            }
+        }
+
+        // Get active hospitalized patients (setelah potensi reset)
+        $allPasienDirawat = $this->pasien->getList();
 
         $data['pasienDirawat'] = $allPasienDirawat;
         $data['totalPasien'] = count($allPasienDirawat);
@@ -158,32 +176,34 @@ protected $jadwal_diet;
             $data['dietItems'][] = ['nama' => $nama, 'jumlah' => $jumlah];
         }
         
-        $statusMap = [
-            '0' => 'menunggu',
-            '1' => 'sedang_disiapkan',
-            '2' => 'siap_antar',
-            '3' => 'sedang_diantar',
-            '4' => 'selesai'
+        // Tentukan jadwal aktif untuk ditampilkan di view
+        $jadwalAktifData = $this->getJadwalAktifFromDb();
+        $data['jadwal_aktif'] = $jadwalAktifData['aktif'];
+
+        // Hitung status order menggunakan kode numerik yang sesuai dengan view
+        $statusOrder = ['0', '1', '2', '3', '4'];
+        $statusLabels = [
+            '0' => 'Menunggu',
+            '1' => 'Sedang Disiapkan',
+            '2' => 'Siap Antar',
+            '3' => 'Sedang Diantar',
+            '4' => 'Selesai'
         ];
 
-        // Status order
-        $data['statusOrder'] = ['menunggu', 'sedang_disiapkan', 'siap_antar', 'sedang_diantar', 'selesai'];
-        
-        $orderCounts = array_fill_keys($data['statusOrder'], 0);
+        $orderCounts = array_fill_keys($statusOrder, 0);
         foreach ($allPasienDirawat as $p) {
-            $rawStatus = $p['status_order'] ?? '0';
-            $mappedStatus = $statusMap[$rawStatus] ?? 'menunggu';
-            if (isset($orderCounts[$mappedStatus])) {
-                $orderCounts[$mappedStatus]++;
+            $rawStatus = (string)($p['status_order'] ?? '0');
+            if (isset($orderCounts[$rawStatus])) {
+                $orderCounts[$rawStatus]++;
             }
         }
 
         $data['orderStats'] = [];
-        foreach ($data['statusOrder'] as $s) {
+        foreach ($statusOrder as $s) {
             $data['orderStats'][] = [
                 'status' => $s,
-                'label' => getOrderStatusLabel($s),
-                'count' => $orderCounts[$s]
+                'label' => $statusLabels[$s],
+                'count' => $orderCounts[$s] ?? 0
             ];
         }
 
@@ -197,37 +217,51 @@ protected $jadwal_diet;
             return $this->response->setJSON(['error' => 'Unauthorized']);
         }
 
-       // Asumsi ID Bangsal diambil dari session user yang sedang login
+        // Asumsi ID Bangsal diambil dari session user yang sedang login
         $idBangsal = (int)(session()->get('id_bangsal') ?? 0); 
         
         if ($idBangsal <= 0) {
             return $this->response->setJSON(['error' => 'Bangsal tidak ditemukan']);
         }
-        
+
+        // Tentukan jadwal aktif saat ini dan kode shift untuk auto-reset
+        date_default_timezone_set('Asia/Jakarta');
+        $tanggal = date('Y-m-d');
+        $jadwalAktifData = $this->getJadwalAktifFromDb();
+        $shift_sekarang = $jadwalAktifData['shift'] ?? '';
+        $kode_shift_sekarang = $tanggal . '_' . $shift_sekarang;
+
+        // Jika bangsal belum di-reset untuk shift ini, reset status_order pasien di bangsal
+        $bangsalRecord = $this->bangsal->find($idBangsal);
+        $lastReset = $bangsalRecord['reset_order'] ?? '';
+        if ($shift_sekarang && $lastReset !== $kode_shift_sekarang) {
+            $this->pasien->getResetOrderBangsal($idBangsal);
+            $this->bangsal->update($idBangsal, ['reset_order' => $kode_shift_sekarang]);
+            $this->logs->saveLog('Reset Shift', "Auto-reset order untuk bangsal {$idBangsal} ke {$kode_shift_sekarang}");
+        }
+
         // Ambil data pasien yang sedang dirawat (status_rawat = '0')
         $pasien = $this->pasien->getPasienDirawat($idBangsal);
 
         // 1. Inisialisasi Variabel Perhitungan
         $dietCount   = [];
         $bentukCount = [];
-            // Status order mapping from db values ('0'-'4') to view string statuses
-        $statusMap = [
-            '0' => 'menunggu',
-            '1' => 'sedang_disiapkan',
-            '2' => 'siap_antar',
-            '3' => 'sedang_diantar',
-            '4' => 'selesai'
+
+        // Hitung status order berdasarkan kode numerik ('0'..'4')
+        $statusOrder = ['0', '1', '2', '3', '4'];
+        $statusLabels = [
+            '0' => 'Menunggu',
+            '1' => 'Sedang Disiapkan',
+            '2' => 'Siap Antar',
+            '3' => 'Sedang Diantar',
+            '4' => 'Selesai'
         ];
 
-        // Status order
-        $statusOrder = ['menunggu', 'sedang_disiapkan', 'siap_antar', 'sedang_diantar', 'selesai'];
-        
         $orderCounts = array_fill_keys($statusOrder, 0);
         foreach ($pasien as $p) {
-            $rawStatus = $p['status_order'] ?? '0';
-            $mappedStatus = $statusMap[$rawStatus] ?? 'menunggu';
-            if (isset($orderCounts[$mappedStatus])) {
-                $orderCounts[$mappedStatus]++;
+            $rawStatus = (string)($p['status_order'] ?? '0');
+            if (isset($orderCounts[$rawStatus])) {
+                $orderCounts[$rawStatus]++;
             }
         }
 
@@ -235,28 +269,20 @@ protected $jadwal_diet;
         foreach ($statusOrder as $s) {
             $orderStats[] = [
                 'status' => $s,
-                'label' => getOrderStatusLabel($s),
-                'count' => $orderCounts[$s]
+                'label' => $statusLabels[$s],
+                'count' => $orderCounts[$s] ?? 0
             ];
         }
 
-        // 2. Lakukan Perhitungan (Looping Data Pasien)
+        // 2. Lakukan Perhitungan (Looping Data Pasien) - hitung distribusi diet & bentuk
         foreach ($pasien as $p) {
             // Hitung Distribusi Diet
             $diet = !empty($p['nama_jenis_diet']) ? $p['nama_jenis_diet'] : 'Belum Atur Diet';
-            if (!isset($dietCount[$diet])) $dietCount[$diet] = 0;
-            $dietCount[$diet]++;
+            $dietCount[$diet] = ($dietCount[$diet] ?? 0) + 1;
 
             // Hitung Distribusi Bentuk Makanan
             $bentuk = !empty($p['nama_bentuk_diet']) ? $p['nama_bentuk_diet'] : 'Makanan Biasa';
-            if (!isset($bentukCount[$bentuk])) $bentukCount[$bentuk] = 0;
-            $bentukCount[$bentuk]++;
-
-            // Hitung Status Order
-            $status = !empty($p['status_pesanan']) ? $p['status_pesanan'] : 'menunggu';
-            if (array_key_exists($status, $orderStats)) {
-                $orderStats[$status]['count']++;
-            }
+            $bentukCount[$bentuk] = ($bentukCount[$bentuk] ?? 0) + 1;
         }
 
         // 3. Logika Penentuan Jadwal Aktif dari database

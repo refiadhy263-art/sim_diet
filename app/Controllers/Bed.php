@@ -26,7 +26,7 @@ class Bed extends BaseController
     public function index()
     {
         $data = [
-            'title' => 'Bed',
+            'title' => 'Manajemen Bed',
             'bangsalList' => $this->bangsal->getList(),
         ];
        // dd($data['bangsalList']);

@@ -531,15 +531,15 @@ function showVerifikasi() {
 
     <!-- Status Order Makanan -->
     <div class="bg-white rounded-2xl p-5 shadow-md">
-        <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="fi fi-rr-clipboards text-blue-600 flex items-center"></i> Status Order Makanan Hari Ini</h3>
+        <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="fi fi-rr-clipboards text-blue-600 flex items-center"></i> Status Order Makanan <?= $jadwal_aktif ?> Hari Ini</h3>
         <div class="grid grid-cols-5 gap-3">
             <?php foreach ($orderStats as $s): ?>
             <div class="text-center p-3 rounded-xl <?= $s['count'] > 0 ? 'bg-opacity-20' : 'bg-slate-50' ?> 
                 <?php
-                    if ($s['status'] === 'menunggu') echo 'bg-amber-50';
-                    elseif ($s['status'] === 'sedang_disiapkan') echo 'bg-sky-50';
-                    elseif ($s['status'] === 'siap_antar') echo 'bg-green-50';
-                    elseif ($s['status'] === 'sedang_diantar') echo 'bg-blue-50';
+                    if ($s['status'] === '0') echo 'bg-amber-50';
+                    elseif ($s['status'] === '1') echo 'bg-sky-50';
+                    elseif ($s['status'] === '2') echo 'bg-green-50';
+                    elseif ($s['status'] === '3') echo 'bg-blue-50';
                     else echo 'bg-red-50';
                 ?>">
                 <p class="text-2xl font-bold text-slate-800"><?= $s['count'] ?></p>

@@ -23,7 +23,7 @@ class JenisDiet extends BaseController
     public function index()
     {
         $data = [
-            'title' => 'Jenis Diet',
+            'title' => 'Manajemen Jenis Diet',
         ];
 
         return view('admin/diet_tampil_view', $data);

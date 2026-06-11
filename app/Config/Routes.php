@@ -31,6 +31,14 @@ $routes->group(
         //$routes->get('/', 'DashboardAdmin::total');
 
 
+        //halaman admin
+        $routes->get('admin', 'Admin::index');
+        $routes->get('admin/getData', 'Admin::getData');
+        $routes->post('admin/save', 'Admin::save');
+        $routes->get('admin/edit/(:num)', 'Admin::edit/$1');
+        $routes->post('admin/update', 'Admin::update');
+        $routes->post('admin/delete/(:num)', 'Admin::delete/$1');
+
         //halaman perawat
         $routes->get('perawat', 'Perawat::index');
         $routes->get('perawat/getData', 'Perawat::getData');

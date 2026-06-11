@@ -23,7 +23,7 @@ class JadwalDiet extends BaseController
     public function index()
     {
         $data = [
-            'title' => 'Jadwal Diet',
+            'title' => 'Manajemen Jadwal Diet',
             'jadwal_diet' => $this->jadwal_diet->getAll(),
         ];
         //dd($data);

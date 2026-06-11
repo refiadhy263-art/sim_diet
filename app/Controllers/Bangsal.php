@@ -30,7 +30,7 @@ class Bangsal extends BaseController
 
         
         $data = [
-            'title' => 'Bangsal',
+            'title' => 'Manajemen Bangsal',
         ];
 
         return view('admin/bangsal_tampil_view', $data);

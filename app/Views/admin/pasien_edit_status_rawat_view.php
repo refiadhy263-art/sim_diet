@@ -8,7 +8,7 @@
 <?= $this->section('content') ?>
 <div class="space-y-4">
     <div class="flex justify-between items-center flex-wrap gap-3">
-        <h2 class="text-xl font-bold flex items-center gap-2"><i class="fi fi-rr-clipboards text-blue-600 flex items-center"></i> Daftar Pasien Update Status Rawat (<?= esc($nama_bangsal) ?>)</h2>
+        <h2 class="text-xl font-bold flex items-center gap-2"><i class="fi fi-rr-refresh text-blue-600 flex items-center"></i> Daftar Pasien Update Status Rawat (<?= esc($nama_bangsal) ?>)</h2>
       
     </div>
 
@@ -215,7 +215,7 @@ function showModalPindahBangsal(pasienId, selectElement, oldStatus) {
 
             // 2. Buat & Munculkan Modal HTML ke DOM
             const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4'; // CSS backdrop modal Tailwind
+            modal.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4';
             modal.innerHTML = `
             
                 <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl transform transition-all scale-100">
@@ -225,7 +225,7 @@ function showModalPindahBangsal(pasienId, selectElement, oldStatus) {
                         <div>
                             <label class="block text-sm font-bold text-gray-600 mb-1">Bangsal Tujuan (Tersedia)</label>
                             <select id="id_bangsal" class="w-full border border-gray-300 rounded-lg p-3 bg-gray-50 focus:ring-blue-500 outline-none">
-                                ${targetBangsals.map(b => `<option value="${b.id_bangsal}">${b.icon || '🏥'} ${b.nama_bangsal}</option>`).join('')}
+                                ${targetBangsals.map(b => `<option value="${b.id_bangsal}">${b.icon || '<i class="fi fi-rr-hospital"></i>'} ${b.nama_bangsal}</option>`).join('')}
                             </select>
                         </div>
                         <div>

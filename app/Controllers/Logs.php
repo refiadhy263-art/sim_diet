@@ -36,7 +36,7 @@ protected $bangsal;
         $filter_bangsal = $this->request->getGet('id_bangsal');
 
         $data = [
-            'title' => 'Log Aktivitas',
+            'title' => 'Manajemen Log Aktivitas',
         ];
 
         // Jika yang login adalah Admin (role = 1)

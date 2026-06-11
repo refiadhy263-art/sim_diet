@@ -26,6 +26,9 @@
         <a href="<?= base_url('dashboard') ?>" class="sidebar-item w-full flex items-center gap-3 px-4 py-2 rounded-xl text-left text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition <?= active_page('dashboard') ?>">
           <i class="fi fi-rr-apps text-lg flex items-center"></i> Dashboard
         </a>
+        <a href="<?= base_url('admin') ?>" class="sidebar-item w-full flex items-center gap-3 px-4 py-2 rounded-xl text-left text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition <?= active_page('admin') ?>">
+          <i class="fi fi-rr-user text-lg flex items-center"></i> Data Admin
+        </a>
         <a href="<?= base_url('perawat') ?>" class="sidebar-item w-full flex items-center gap-3 px-4 py-2 rounded-xl text-left text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition <?= active_page('perawat') ?>">
           <i class="fi fi-rr-doctor text-lg flex items-center"></i> Data Perawat
         </a>
